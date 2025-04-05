@@ -9,6 +9,10 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.Data;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
+using InfoResponse = backend.Extensions.Models.InfoResponse;
+using InfoRequest = backend.Extensions.Models.InfoRequest;
+using LoginRequest = backend.Extensions.Models.LoginRequest;
+using RegisterRequest = backend.Extensions.Models.RegisterRequest;
 
 namespace backend.Extensions;
 public static class IdentityApiEndpointRouteBuilderExtensions
@@ -292,82 +296,5 @@ public static class IdentityApiEndpointRouteBuilderExtensions
 
         public void Add(Action<EndpointBuilder> convention) => InnerAsConventionBuilder.Add(convention);
         public void Finally(Action<EndpointBuilder> finallyConvention) => InnerAsConventionBuilder.Finally(finallyConvention);
-    }
-    
-    /// <summary>
-    /// The request type for the "/register" endpoint added by <see cref="IdentityApiEndpointRouteBuilderExtensions.MapIdentityApiCustom"/>.
-    /// </summary>
-    public sealed class RegisterRequest
-    {
-        /// <summary>
-        /// The user's username.
-        /// </summary>
-        public required string Username { get; init; }
-
-        /// <summary>
-        /// The user's password.
-        /// </summary>
-        public required string Password { get; init; }
-        
-        /// <summary>
-        /// The user's invite code.
-        /// </summary>
-        public required Guid InviteCode { get; init; }
-    }
-    /// <summary>
-    /// The request type for the "/manage/info" endpoint added by <see cref="IdentityApiEndpointRouteBuilderExtensions.MapIdentityApiCustom"/>.
-    /// All properties are optional. No modifications will be made to the user if all the properties are omitted from the request.
-    /// </summary>
-    public sealed class InfoRequest
-    {
-        /// <summary>
-        /// The optional new username for the authenticated user. This will replace the username if there was one.
-        /// </summary>
-        public string? NewUsername { get; init; }
-
-        /// <summary>
-        /// The optional new password for the authenticated user. If a new password is provided, the <see cref="OldPassword"/> is required.
-        /// If the user forgot the old password, use the "/forgotPassword" endpoint instead.
-        /// </summary>
-        public string? NewPassword { get; init; }
-
-        /// <summary>
-        /// The old password for the authenticated user. This is only required if a <see cref="NewPassword"/> is provided.
-        /// </summary>
-        public string? OldPassword { get; init; }
-    }
-    
-    
-    /// <summary>
-    /// The request type for the "/login" endpoint added by <see cref="IdentityApiEndpointRouteBuilderExtensions.MapIdentityApiCustom"/>.
-    /// </summary>
-    public sealed class LoginRequest
-    {
-        /// <summary>
-        /// The user's username.
-        /// </summary>
-        public required string Username { get; init; }
-
-        /// <summary>
-        /// The user's password.
-        /// </summary>
-        public required string Password { get; init; }
-        
-        ///
-        ///
-        ///
-        public required bool RememberMe { get; init; }
-    }
-    /// <summary>
-    /// The response type for the "/manage/info" endpoints added by <see cref="IdentityApiEndpointRouteBuilderExtensions.MapIdentityApiCustom"/>.
-    /// </summary>
-    public sealed class InfoResponse
-    {
-        /// <summary>
-        /// The username associated with the authenticated user.
-        /// </summary>
-        public required string Username { get; init; }
-        
-        public required string[] Roles { get; init; }
     }
 }

@@ -1,0 +1,144 @@
+@page "/Login"
+@using System.ComponentModel.DataAnnotations
+@using System.Net
+@using System.Net.Http.Headers
+@using System.Text.Json
+@using backend.Extensions.Models
+@using frontend.Services
+@using frontend.Web
+@using Microsoft.AspNetCore.Authentication.Cookies
+@using Microsoft.AspNetCore.Identity
+@using Cookie = frontend.Web.Cookie
+
+@inject ILogger<Login> Logger
+@inject NavigationManager NavigationManager
+@inject HttpClient HttpClient
+@inject IInternalApiService InternalApiService
+@* @inject IdentityRedirectManager RedirectManager *@
+
+<h3>Login</h3>
+
+<EditForm Model="Input" method="post" OnValidSubmit="LoginUser" FormName="login" class="">
+    <StatusMessage Message="@errorMessage"/>
+    <DataAnnotationsValidator/>
+    <ValidationSummary class="" role="alert"/>
+    <div class="">
+        <label for="login-username">Username</label>
+        <div class="">
+            <InputText id="login-username" @bind-Value="Input.Username" class="" autocomplete="username" aria-required="true" placeholder="Username"/>
+        </div>
+        <ValidationMessage For="() => Input.Username" class=""/>
+    </div>
+    <div class="">
+        <label for="login-password">Password</label>
+        <div class="">
+            <InputText id="login-password" type="password" @bind-Value="Input.Password" class="" autocomplete="current-password" aria-required="true" placeholder="password"/>
+        </div>
+        <ValidationMessage For="() => Input.Password" class=""/>
+    </div>
+    <div class="">
+        <label class="">
+            <InputCheckbox @bind-Value="Input.RememberMe"/>
+            Remember me
+        </label>
+    </div>
+    <div class="">
+        <button type="submit" class="">Log in</button>
+    </div>
+    <div class="">
+        <a href="Account/ForgotPassword">Forgot your password?</a>
+        @* <NewLineLink Path="Account/ForgotPassword" NewTab="false" Text="Forgot your password?"/> *@
+    </div>
+    <hr/>
+    <div class="">
+        @* <NewLineLink
+            Path="@(NavigationManager.GetUriWithQueryParameters("Account/Register", new Dictionary<string, object?> { ["ReturnUrl"] = ReturnUrl }))"
+            NewTab="false"
+            Text="Register as a new user"/> *@
+        @* <NewLineLink Path="Account/ResendEmailConfirmation" NewTab="false" Text="Resend email confirmation"/> *@
+    </div>
+</EditForm>
+
+@code {
+    private string? errorMessage;
+
+    [CascadingParameter] private HttpContext HttpContext { get; set; } = default!;
+
+    // ReSharper disable once AutoPropertyCanBeMadeGetOnly.Local
+    [SupplyParameterFromForm] private InputModel Input { get; set; } = new();
+
+    
+    [SupplyParameterFromQuery] private string? ReturnUrl { get; set; }
+    
+    public async Task LoginUser()
+    {
+        // This doesn't count login failures towards account lockout
+        // To enable password failures to trigger account lockout, set lockoutOnFailure: true
+        var cookie = await InternalApiService.PostLogin(Input.ToRequest());
+
+        if (cookie.IsEmpty() == false)
+        {
+            HttpContext.Response.Cookies.Append(cookie.Key, cookie.Value, cookie.Options);
+            NavigationManager.NavigateTo(ReturnUrl);
+        }
+        
+        /*
+        if (result.Succeeded)
+        {
+            Logger.LogInformation("User logged in.");
+            //TODO: rewrite this to work
+            //RedirectManager.RedirectTo(ReturnUrl);
+        }
+        else if (result.RequiresTwoFactor)
+        {
+            //TODO: rewrite this to work
+            //RedirectManager.RedirectTo(
+            //    "Account/LoginWith2fa",
+            //    new Dictionary<string, object?> { ["returnUrl"] = ReturnUrl, ["rememberMe"] = Input.RememberMe });
+        }
+        else if (result.IsLockedOut)
+        {
+            Logger.LogWarning("User account locked out.");
+            //TODO: rewrite this to work
+            //RedirectManager.RedirectTo("Account/Lockout");
+        }
+        else
+        {
+            errorMessage = "Error: Invalid login attempt.";
+        }
+        */
+    }
+    /*
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (cookie.IsEmpty() == false)
+        {
+            Logger.LogInformation("setting cookie");
+            await CookieHandler.Set(cookie);
+            StateHasChanged();
+        }
+        await base.OnAfterRenderAsync(firstRender);
+    }
+    */
+
+    private sealed class InputModel
+    {
+        [Required] public string Username { get; set; } = "";
+
+        [Required]
+        [DataType(DataType.Password)]
+        public string Password { get; set; } = "";
+
+        [Display(Name = "Remember me?")] public bool RememberMe { get; set; }
+
+        internal LoginRequest ToRequest()
+        {
+            return new ()
+            {
+                Username = this.Username,
+                Password = this.Password,
+                RememberMe = this.RememberMe
+            };
+        }
+    }
+}

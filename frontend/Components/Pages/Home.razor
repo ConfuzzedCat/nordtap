@@ -1,0 +1,48 @@
+﻿@page "/"
+@using System.Security.Claims
+@using System.Text.Json
+@using frontend.Services
+@using frontend.Utils
+
+@inject ILogger<Home> Logger
+@inject IInternalApiService InternalApiService
+
+
+<PageTitle>Home</PageTitle>
+
+<h1>Hello, world!</h1>
+
+Welcome to your new app.
+
+@if (string.IsNullOrWhiteSpace(_username) is false)
+{
+    <p>Hello @_username</p>
+}
+
+@code {
+    [CascadingParameter] private HttpContext HttpContext { get; set; } = default!;
+
+    private string _username = string.Empty;
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var doesAuthCookieExist = HttpContext.Request.Cookies.ContainsKey("NordtapCookie");
+            if (doesAuthCookieExist)
+            {
+                var cookies = CookieUtils.JoinCookies(HttpContext.Request.Cookies);
+                var response = await InternalApiService.GetUsername(cookies);
+                if (string.IsNullOrWhiteSpace(response) is false)
+                {
+                    _username = response;
+                }
+            }
+        }
+        catch (Exception e)
+        {
+            Logger.LogWarning("Failed to get username, {exception}", e);
+        }
+        
+    }
+
+}

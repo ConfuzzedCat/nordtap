@@ -19,4 +19,16 @@ public sealed class LoginRequest
     /// Whether to remember the user.
     /// </summary>
     public required bool RememberMe { get; init; }
+    
+    /// <summary>
+    /// The optional two-factor authenticator code. This may be required for users who have enabled two-factor authentication.
+    /// This is not required if a <see cref="TwoFactorRecoveryCode"/> is sent.
+    /// </summary>
+    public string? TwoFactorCode { get; init; }
+
+    /// <summary>
+    /// An optional two-factor recovery code from <see cref="Microsoft.AspNetCore.Identity.Data.TwoFactorResponse.RecoveryCodes"/>.
+    /// This is required for users who have enabled two-factor authentication but lost access to their <see cref="TwoFactorCode"/>.
+    /// </summary>
+    public string? TwoFactorRecoveryCode { get; init; }
 }

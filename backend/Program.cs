@@ -41,7 +41,10 @@ public class Program
         builder.Services.AddDbContext<DataContext>(opt =>
             opt.UseNpgsql(builder.Configuration.GetConnectionString("Dev")));
 
-        builder.Services.AddAuthorization();
+        builder.Services.AddAuthorization(
+                options => options.AddPolicy("TwoFactorEnabled",
+                x => x.RequireClaim("TwoFactorEnabled", "true"))
+        );
         builder.Services.AddIdentityApiEndpoints<User>()
             .AddRoles<IdentityRole>()
             .AddEntityFrameworkStores<DataContext>();
@@ -56,6 +59,7 @@ public class Program
         {
             options.Cookie.Name = "NordtapCookie";
             options.ExpireTimeSpan = TimeSpan.FromDays(365);
+            options.ClaimsIssuer = "Nordtap.ConfuzzedCat.dev";
         });
         
         var app = builder.Build();

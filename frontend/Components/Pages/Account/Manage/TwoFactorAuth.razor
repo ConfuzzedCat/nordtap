@@ -1,0 +1,146 @@
+@page "/Account/Manage/2fa"
+
+@using System.Globalization
+@using System.Text
+@using System.Text.Encodings.Web
+@using System.Web
+@using frontend.Services
+@using frontend.Web
+@using Microsoft.AspNetCore.Identity
+@using QRCoder
+@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.AspNetCore.Identity.Data
+
+@rendermode InteractiveServer
+
+@* @inject UrlEncoder UrlEncoder *@
+@inject IInternalApiService InternalApiService
+@inject Blazored.LocalStorage.ILocalStorageService LocalStorage
+@inject ILogger<TwoFactorAuth> Logger
+@*
+<AuthorizeView>
+    <Authorized>
+        <p>Test auth</p>
+    </Authorized>
+</AuthorizeView>
+*@
+
+<h3>2fa</h3>
+@if (string.IsNullOrWhiteSpace(_sharedKey) == false)
+{
+    <p>Sharedkey: <code>@_sharedKey</code> </p>
+
+    <img src="@_imageDataUrl" alt="Qr code for 2 Factor Authentication."/>
+}
+else
+{
+    <div>Spinner animation</div>
+}
+@if(string.IsNullOrWhiteSpace(_error) == false)
+{
+    <p>Couldn't get 2fa auth key</p>
+    <p>errors: @_error</p>
+}
+
+@code {
+    private const string AuthenticatorUriFormat = "otpauth://totp/{0}:{1}?secret={2}&issuer={0}&digits=6";
+    private byte[] _qrCodeImage = [];
+    private string _authenticatorUri = string.Empty;
+    private string _sharedKey = string.Empty;
+    private string _imageDataUrl = string.Empty;
+    private string _error = string.Empty;
+    private Cookie _cookie = Cookie.Empty;
+    
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            Logger.LogInformation("First render.");
+            var cookieStorageStr = await LocalStorage.GetItemAsStringAsync("NordtapCookie");
+            if (cookieStorageStr is null)
+            {
+                Logger.LogWarning("Couldn't find");
+                return;
+            }
+            _cookie = Cookie.Parse(cookieStorageStr);
+            Logger.LogInformation("Cookie: {key}", _cookie.Key);
+            await LoadSharedKeyAndQrCodeUriAsync(_cookie.ToString());
+        }
+    }
+
+    private async ValueTask LoadSharedKeyAndQrCodeUriAsync(string cookie)
+    {
+        var infoResponse = await InternalApiService.GetUserInfo(cookie);
+
+        if (infoResponse is null)
+        {
+            return;
+        }
+
+        if (infoResponse.TwoFactorEnabled == false)
+        {
+            TwoFactorResponse _ = await EnableTwoFactorAuth(cookie);
+        }
+        
+        var response2fa = await InternalApiService.PostTwoFactorAuth(cookie, new TwoFactorRequest
+        {
+            
+        });
+        if (response2fa is null)
+        {
+            return;
+        }
+        string unformattedKey = response2fa.SharedKey;
+
+        string username = infoResponse.Username;
+        
+        _sharedKey = FormatKey(unformattedKey);
+
+        _authenticatorUri = GenerateQrCodeUri(username, unformattedKey!);
+        _qrCodeImage = GenerateQrCode(_authenticatorUri);
+        var imagesrc = Convert.ToBase64String(_qrCodeImage);
+        _imageDataUrl = $"data:image/png;base64,{imagesrc}";
+        StateHasChanged();
+    }
+
+    private async Task<TwoFactorResponse> EnableTwoFactorAuth(string cookie)
+    {
+        throw new NotImplementedException();
+    }
+
+    private string GenerateQrCodeUri(string username, string unformattedKey)
+    {
+        return string.Format(
+            CultureInfo.InvariantCulture,
+            AuthenticatorUriFormat,
+            //UrlEncoder.Encode("Nordtap.ConfuzzedCat.Dev"),
+            HttpUtility.UrlEncode("Nordtap.ConfuzzedCat.Dev"),
+            //UrlEncoder.Encode(username),
+            HttpUtility.UrlEncode(username),
+            unformattedKey);
+    }
+    private byte[] GenerateQrCode(string uri)
+    {
+        using var qrGenerator = new QRCodeGenerator();
+        using var qrCodeData = qrGenerator.CreateQrCode(uri, QRCodeGenerator.ECCLevel.Q);
+        using var qrCode = new PngByteQRCode(qrCodeData);
+        return qrCode.GetGraphic(10);
+    }
+    private string FormatKey(string unformattedKey)
+    {
+        var result = new StringBuilder();
+        var currentPosition = 0;
+        while (currentPosition + 4 < unformattedKey.Length)
+        {
+            result.Append(unformattedKey.AsSpan(currentPosition, 4)).Append(' ');
+            currentPosition += 4;
+        }
+
+        if (currentPosition < unformattedKey.Length)
+        {
+            result.Append(unformattedKey.AsSpan(currentPosition));
+        }
+
+        return result.ToString().ToLowerInvariant();
+    }
+}

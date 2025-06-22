@@ -4,7 +4,9 @@
 @using System.Net.Http.Headers
 @using System.Text.Json
 @using backend.Extensions.Models
+@using frontend.Extensions
 @using frontend.Services
+@using frontend.Utils
 @using frontend.Web
 @using Microsoft.AspNetCore.Authentication.Cookies
 @using Microsoft.AspNetCore.Identity
@@ -14,7 +16,10 @@
 @inject NavigationManager NavigationManager
 @inject HttpClient HttpClient
 @inject IInternalApiService InternalApiService
+@inject Blazored.LocalStorage.ILocalStorageService LocalStorage
 @* @inject IdentityRedirectManager RedirectManager *@
+
+@rendermode InteractiveServer
 
 <h3>Login</h3>
 
@@ -35,6 +40,13 @@
             <InputText id="login-password" type="password" @bind-Value="Input.Password" class="" autocomplete="current-password" aria-required="true" placeholder="password"/>
         </div>
         <ValidationMessage For="() => Input.Password" class=""/>
+    </div>
+    <div class="">
+        <label for="login-twofactorcode">Two-factor code</label>
+        <div class="">
+            <InputText id="login-twofactorcode" @bind-Value="Input.TwoFactorCode" class="" autocomplete="one-time-code" aria-required="true" placeholder="123456 or XXX-XXX"/>
+        </div>
+        <ValidationMessage For="() => Input.TwoFactorCode" class=""/>
     </div>
     <div class="">
         <label class="">
@@ -70,57 +82,62 @@
     
     [SupplyParameterFromQuery] private string? ReturnUrl { get; set; }
     
+    private Cookie _cookie = Cookie.Empty;
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (_cookie.IsEmpty() == false)
+        {
+            Logger.LogInformation("Cookie wasn't empty, setting. key: {key}", _cookie.Key);
+            await LocalStorage.SetItemAsStringAsync(_cookie.Key, _cookie.ToString());
+            //await LocalStorage.SetItemAsync(_cookie.Key, _cookie);
+            _cookie = Cookie.Empty;
+        }
+    }
+
     public async Task LoginUser()
     {
         // This doesn't count login failures towards account lockout
         // To enable password failures to trigger account lockout, set lockoutOnFailure: true
-        var cookie = await InternalApiService.PostLogin(Input.ToRequest());
-
-        if (cookie.IsEmpty() == false)
-        {
-            HttpContext.Response.Cookies.Append(cookie.Key, cookie.Value, cookie.Options);
-            NavigationManager.NavigateTo(ReturnUrl);
-        }
+        var result = await InternalApiService.PostLogin(Input.ToRequest());
         
-        /*
-        if (result.Succeeded)
+        switch (result.ResultStatus)
         {
-            Logger.LogInformation("User logged in.");
-            //TODO: rewrite this to work
-            //RedirectManager.RedirectTo(ReturnUrl);
+            case LoginResult.Status.Succeeded:
+                var cookie = result.Cookie;
+                _cookie = cookie;
+                Logger.LogInformation("User logged in.");
+                if (ReturnUrl != null)
+                {
+                    NavigationManager.NavigateTo(ReturnUrl);
+                }
+                else
+                {
+                    NavigationManager.NavigateTo("/");
+                }
+                return;
+            case LoginResult.Status.Failed:
+                errorMessage = "Error: Invalid login attempt.";
+                return;
+            case LoginResult.Status.LockedOut:
+                //TODO: Add page for lockout
+                Logger.LogWarning("User account locked out.");
+                NavigationManager.NavigateTo("Account/Lockout");
+                return;
+            case LoginResult.Status.NotAllowed:
+                errorMessage = "Error: login not allowed.";
+                return;
+            case LoginResult.Status.RequiresTwoFactor:
+                //TODO: Add page for 2fa
+                //var uri = new Uri("Account/LoginWith2fa", UriKind.Relative);
+                //uri.AddParameter("returnUrl", ReturnUrl);
+                //uri.AddParameter("rememberMe", Input.RememberMe.ToString());
+                //NavigationManager.NavigateTo(uri.ToString());
+                return;
+            default:
+                throw new ArgumentOutOfRangeException();
         }
-        else if (result.RequiresTwoFactor)
-        {
-            //TODO: rewrite this to work
-            //RedirectManager.RedirectTo(
-            //    "Account/LoginWith2fa",
-            //    new Dictionary<string, object?> { ["returnUrl"] = ReturnUrl, ["rememberMe"] = Input.RememberMe });
-        }
-        else if (result.IsLockedOut)
-        {
-            Logger.LogWarning("User account locked out.");
-            //TODO: rewrite this to work
-            //RedirectManager.RedirectTo("Account/Lockout");
-        }
-        else
-        {
-            errorMessage = "Error: Invalid login attempt.";
-        }
-        */
     }
-    /*
-    protected override async Task OnAfterRenderAsync(bool firstRender)
-    {
-        if (cookie.IsEmpty() == false)
-        {
-            Logger.LogInformation("setting cookie");
-            await CookieHandler.Set(cookie);
-            StateHasChanged();
-        }
-        await base.OnAfterRenderAsync(firstRender);
-    }
-    */
-
+    
     private sealed class InputModel
     {
         [Required] public string Username { get; set; } = "";
@@ -129,15 +146,29 @@
         [DataType(DataType.Password)]
         public string Password { get; set; } = "";
 
+        public string? TwoFactorCode { get; set; }
+
         [Display(Name = "Remember me?")] public bool RememberMe { get; set; }
 
         internal LoginRequest ToRequest()
         {
+            if (TwoFactorCode != null && TwoFactorCode.Contains('-'))
+            {
+                return new ()
+                {
+                    Username = this.Username,
+                    Password = this.Password,
+                    RememberMe = this.RememberMe,
+                    TwoFactorRecoveryCode = this.TwoFactorCode
+                };
+            }
+            
             return new ()
             {
                 Username = this.Username,
                 Password = this.Password,
-                RememberMe = this.RememberMe
+                RememberMe = this.RememberMe,
+                TwoFactorCode = this.TwoFactorCode
             };
         }
     }

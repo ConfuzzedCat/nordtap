@@ -85,16 +85,27 @@ public static class IdentityApiEndpointRouteBuilderExtensions
             signInManager.AuthenticationScheme = useCookieScheme ? IdentityConstants.ApplicationScheme : IdentityConstants.BearerScheme;
 
             var result = await signInManager.PasswordSignInAsync(login.Username, login.Password, isPersistent, lockoutOnFailure: true);
-            
+
+            if (result.RequiresTwoFactor)
+            {
+                if (!string.IsNullOrEmpty(login.TwoFactorCode))
+                {
+                    result = await signInManager.TwoFactorAuthenticatorSignInAsync(login.TwoFactorCode, isPersistent, rememberClient: isPersistent);
+                }
+                else if (!string.IsNullOrEmpty(login.TwoFactorRecoveryCode))
+                {
+                    result = await signInManager.TwoFactorRecoveryCodeSignInAsync(login.TwoFactorRecoveryCode);
+                }
+            }
+
             if (!result.Succeeded)
             {
                 return TypedResults.Problem(result.ToString(), statusCode: StatusCodes.Status401Unauthorized);
             }
-
             // The signInManager already produced the needed response in the form of a cookie or bearer token.
             return TypedResults.Empty;
         });
-
+        /*
         routeGroup.MapPost("/refresh", async Task<Results<Ok<AccessTokenResponse>, UnauthorizedHttpResult, SignInHttpResult, ChallengeHttpResult>>
             ([FromBody] RefreshRequest refreshRequest, [FromServices] IServiceProvider sp) =>
         {
@@ -114,12 +125,13 @@ public static class IdentityApiEndpointRouteBuilderExtensions
             var newPrincipal = await signInManager.CreateUserPrincipalAsync(user);
             return TypedResults.SignIn(newPrincipal, authenticationScheme: IdentityConstants.BearerScheme);
         });
+        */
         var accountGroup = routeGroup.MapGroup("/manage").RequireAuthorization();
-        /*
+        
         accountGroup.MapPost("/2fa", async Task<Results<Ok<TwoFactorResponse>, ValidationProblem, NotFound>>
             (ClaimsPrincipal claimsPrincipal, [FromBody] TwoFactorRequest tfaRequest, [FromServices] IServiceProvider sp) =>
         {
-            var signInManager = sp.GetRequiredService<SignInManager<TUser>>();
+            var signInManager = sp.GetRequiredService<SignInManager<User>>();
             var userManager = signInManager.UserManager;
             if (await userManager.GetUserAsync(claimsPrincipal) is not { } user)
             {
@@ -145,10 +157,12 @@ public static class IdentityApiEndpointRouteBuilderExtensions
                 }
 
                 await userManager.SetTwoFactorEnabledAsync(user, true);
+                await userManager.AddClaimAsync(user, new Claim("TwoFactorEnabled", "true"));
             }
             else if (tfaRequest.Enable == false || tfaRequest.ResetSharedKey)
             {
                 await userManager.SetTwoFactorEnabledAsync(user, false);
+                await userManager.AddClaimAsync(user, new Claim("TwoFactorEnabled", "false"));
             }
 
             if (tfaRequest.ResetSharedKey)
@@ -189,7 +203,7 @@ public static class IdentityApiEndpointRouteBuilderExtensions
                 IsMachineRemembered = await signInManager.IsTwoFactorClientRememberedAsync(user),
             });
         });
-        */
+        
         accountGroup.MapGet("/info", async Task<Results<Ok<InfoResponse>, ValidationProblem, NotFound>>
             (ClaimsPrincipal claimsPrincipal, [FromServices] IServiceProvider sp) =>
         {
@@ -198,7 +212,6 @@ public static class IdentityApiEndpointRouteBuilderExtensions
             {
                 return TypedResults.NotFound();
             }
-
             return TypedResults.Ok(await CreateInfoResponseAsync(user, userManager));
         });
 
@@ -285,7 +298,8 @@ public static class IdentityApiEndpointRouteBuilderExtensions
         return new()
         {
             Username = await userManager.GetUserNameAsync(user) ?? throw new NotSupportedException("Users must have an username."),
-            Roles = (await userManager.GetRolesAsync(user)).ToArray()
+            Roles = (await userManager.GetRolesAsync(user)).ToArray(),
+            TwoFactorEnabled = await userManager.GetTwoFactorEnabledAsync(user)
         };
     }
 

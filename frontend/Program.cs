@@ -1,4 +1,5 @@
 using System.Net;
+using Blazored.LocalStorage;
 using frontend.Components;
 using frontend.Services;
 using Microsoft.AspNetCore.Components.Authorization;
@@ -26,6 +27,7 @@ public class Program
             
         });
         builder.Services.AddScoped<IInternalApiService, InternalApiService>();
+        builder.Services.AddBlazoredLocalStorage();
         builder.Services.AddHttpContextAccessor();
 
         

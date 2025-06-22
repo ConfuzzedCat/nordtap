@@ -27,6 +27,7 @@ Welcome to your new app.
     {
         try
         {
+            //TODO: Change to localstorage
             var doesAuthCookieExist = HttpContext.Request.Cookies.ContainsKey("NordtapCookie");
             if (doesAuthCookieExist)
             {

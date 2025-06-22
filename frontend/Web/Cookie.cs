@@ -16,6 +16,7 @@ public struct Cookie
 
     public static Cookie Parse(string _CookieString)
     {
+        string _cstr = _CookieString;
         string[] _CookieStringSplit = _CookieString.Split(';');
         string _Key = _CookieStringSplit[0].Split('=')[0].Trim();
         string _Value = _CookieStringSplit[0].Split('=')[1].Trim();
@@ -72,7 +73,7 @@ public struct Cookie
                 Path = _Path,
                 Expires = b_dtoExpires ? dtoExpires.UtcDateTime : null
             },
-            _strValue = _CookieString
+            _strValue = _cstr
         };
     }
 
@@ -83,6 +84,6 @@ public struct Cookie
 
     public bool IsEmpty()
     {
-        return _strValue == string.Empty;
+        return string.IsNullOrWhiteSpace(_strValue) && string.IsNullOrWhiteSpace(Key);
     }
 }   

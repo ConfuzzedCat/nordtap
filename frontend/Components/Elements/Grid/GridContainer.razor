@@ -1,0 +1,101 @@
+@using frontend.Components.Elements.ElementData
+@using frontend.Components.Elements.Grid.Events
+@inject ILogger<GridContainer> Logger
+@rendermode InteractiveServer
+
+<h3>GridContainer</h3>
+<button @onclick="AddChild">addChild</button>
+
+<CascadingValue Value="this">
+    <div class="grid-container">
+        @for (int _column = 0; _column < Columns; _column++)
+        {
+            var c = _column;
+            <GridColumn>
+                @for (int _row = 0; _row < Rows; _row++)
+                {
+                    var pos = new GridPosition(c, _row);
+                    var isEmpty = Items.TryGetValue(pos, out var item);
+                    <GridRow 
+                        GridPosition="pos"
+                        OnDragStart="OnDragStartCallback"
+                        OnDragEnd="OnDragEndCallback"
+                        OnDragEnter="OnDragEnterCallback"
+                        OnDragLeave="OnDragLeaveCallback"
+                        OnDrop="OnDropCallback"
+                        Draggable="@isEmpty"
+                        >
+                        @if (isEmpty)
+                        {
+                            <GridItem GridPosition="pos" CloneItem="item"></GridItem>
+                        }
+                        else
+                        {
+                            <GridEmptyItem GridPosition="pos"></GridEmptyItem>
+                        }
+                    </GridRow>
+                }
+            </GridColumn>
+        }
+    </div>
+</CascadingValue>
+@code {
+    [Parameter] public int Columns { get; set; }
+    [Parameter] public int Rows { get; set; }
+    //[Parameter] public EventCallback AddChild { get; set; }
+    //[Parameter] public RenderFragment? ChildContent { get; set; }
+    private Dictionary<GridPosition, GridItem> Items { get; set; } = new();
+
+    public bool Register(GridPosition pos, GridItem item)
+    {
+        try
+        {
+            //Logger.LogInformation("Registering item...");
+            //if (!FindNextSpot(out var pos) || pos is null) return;
+            Items.Add(pos, item);
+            Logger.LogInformation("Registered item at pos: {pos}", pos);
+        }
+        catch (ArgumentException)
+        {
+            Logger.LogWarning("Can't add element at pos: {pos}", pos);
+            return false;
+        }
+
+        return true;
+    }
+
+    public void AddChild()
+    {
+        var rand = new Random();
+        var pos = new GridPosition(rand.Next(Columns), rand.Next(Rows));
+        
+        var didRegister = Register(pos, new GridItem
+        {
+            GridPosition = pos,
+            Parent = this
+        });
+        
+        Logger.LogInformation("Did it register? {didRegister}", didRegister);
+        
+        StateHasChanged();
+    }
+
+    private void OnMouseOverCallback(MouseEventArgs obj)
+    {
+    }
+    private void OnDragStartCallback(GridDragEventArgs obj)
+    {
+    }
+    private void OnDragEndCallback(GridDragEventArgs obj)
+    {
+    }
+    private void OnDragEnterCallback(GridDragEventArgs obj)
+    {
+    }
+    private void OnDragLeaveCallback(GridDragEventArgs obj)
+    {
+    }
+    private void OnDropCallback(GridDragEventArgs obj)
+    {
+    }
+}

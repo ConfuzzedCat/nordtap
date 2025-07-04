@@ -1,3 +1,11 @@
+body {
+    --margin-height:  2.5vh;
+    --margin-width:  2.5vw;
+
+    --max-width: calc(100vw - calc(var(--margin-width) * 2));
+    --max-height: calc(100vh - calc(var(--margin-height) * 2));
+}
+
 h1:focus {
     outline: none;
 }

@@ -2,6 +2,7 @@
 @using System.Text.Json
 @using frontend.Services
 @using frontend.Utils
+@using frontend.Components.Elements.Grid
 
 @inject ILogger<Account> Logger
 @inject HttpClient HttpClient
@@ -11,8 +12,10 @@
 
 @if (_info.Length > 0)
 {
-    <p>Info from server:</p>
-    <p>@_info</p>
+    <GridRow>
+        <p>Info from server:</p>
+        <p>@_info</p>
+    </GridRow>
 }
     
 @code {

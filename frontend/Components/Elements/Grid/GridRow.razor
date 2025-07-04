@@ -1,0 +1,48 @@
+@using frontend.Components.Elements.ElementData
+@using frontend.Components.Elements.Grid.Events
+<div
+    class="@CalculateClasses()"
+    @ondragstart="(args) => ConvertEvent(args, OnDragStart)"
+    @ondragend="(args) => ConvertEvent(args, OnDragEnd)"
+    @ondragenter="(args) => ConvertEvent(args, OnDragEnter)"
+    @ondragleave="(args) => ConvertEvent(args, OnDragLeave)"
+    @ondrop="(args) => ConvertEvent(args, OnDrop)"
+    @ondragover="(args) => ConvertEvent(args, OnDragLeave)"
+    @ondragover:preventDefault="true"
+    @onmouseover="OnMouseOver"
+    draggable="@Draggable.ToString()">
+    @ChildContent
+</div>
+@code {
+    [Parameter]                 public RenderFragment?                  ChildContent    { get; set; }
+    [Parameter]                 public EventCallback<MouseEventArgs>    OnMouseOver     { get; set; }
+    [Parameter]                 public EventCallback<GridDragEventArgs> OnDragStart     { get; set; }
+    [Parameter]                 public EventCallback<GridDragEventArgs> OnDragEnd       { get; set; }
+    [Parameter]                 public EventCallback<GridDragEventArgs> OnDragEnter     { get; set; }
+    [Parameter]                 public EventCallback<GridDragEventArgs> OnDragLeave     { get; set; }
+    [Parameter]                 public EventCallback<GridDragEventArgs> OnDragOver      { get; set; }
+    [Parameter]                 public EventCallback<GridDragEventArgs> OnDrop          { get; set; }
+    [Parameter]                 public bool                             IsSelecting     { get; set; }
+    [Parameter]                 public bool                             IsSelected      { get; set; }
+    [Parameter]                 public bool                             IsTarget        { get; set; }
+    [Parameter]                 public bool                             Draggable       { get; set; }
+    [Parameter, EditorRequired] public GridPosition                     GridPosition    { get; set; }
+
+    private string CalculateClasses()
+    {
+        List<string> classes = ["grid-row"];
+        if (IsSelecting is false) return classes[0];
+        if (IsSelected is false && IsTarget)
+        { 
+            classes.Add("grid-row-target"); 
+        }
+
+        return string.Join(' ', classes);
+    }
+
+    private void ConvertEvent(DragEventArgs args, EventCallback<GridDragEventArgs> eventCallback)
+    {
+        var newArgs = new GridDragEventArgs(GridPosition, args);
+        eventCallback.InvokeAsync(newArgs);
+    }
+}

@@ -3,6 +3,7 @@
 @using System.Text.Json
 @using frontend.Services
 @using frontend.Utils
+@using frontend.Components.Elements.Grid
 
 @inject ILogger<Home> Logger
 @inject IInternalApiService InternalApiService
@@ -13,6 +14,8 @@
 <h1>Hello, world!</h1>
 
 Welcome to your new app.
+<GridContainer Columns="3" Rows="3">
+</GridContainer>
 
 @if (string.IsNullOrWhiteSpace(_username) is false)
 {
@@ -42,7 +45,6 @@ Welcome to your new app.
         {
             Logger.LogWarning("Failed to get username, {exception}", e);
         }
-        
     }
 
 }

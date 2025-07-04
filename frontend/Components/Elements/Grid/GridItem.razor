@@ -1,0 +1,36 @@
+@using frontend.Components.Elements.ElementData
+@inject ILogger<GridItem> Logger
+
+
+<h3>GridItem</h3>
+<div>
+    <p>Test @GridPosition</p>
+</div>
+
+
+@code {
+    [CascadingParameter] public GridContainer? Parent { get; set; }
+    //[Parameter] public RenderFragment? ChildContent { get; set; }
+    [Parameter] public GridItem? CloneItem { get; set; }
+    [Parameter] public GridPosition GridPosition { get; set; }
+
+    protected override Task OnInitializedAsync()
+    {
+        if (Parent is null)
+        {
+            throw new Exception("Parent needs to be GridContainer");
+        }
+
+        if (CloneItem is not null)
+        {
+            Clone(CloneItem);
+        }
+        return base.OnInitializedAsync();
+    }
+
+    private void Clone(GridItem cloneItem)
+    {
+        GridPosition = cloneItem.GridPosition;
+    }
+
+}

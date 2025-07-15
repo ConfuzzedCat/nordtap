@@ -1,17 +1,24 @@
 namespace frontend.Components.Elements.ElementData;
 
-public struct GridPosition
+public record struct GridPosition
 {
-    public int Column { get; set; }
-    public int Row { get; set; }
+    public static readonly GridPosition Empty = new (-1d,-1d);
+    public double X { get; set; }
+    public double Y { get; set; }
+    
 
-    public GridPosition(int column, int row)
+    public GridPosition(double x, double y)
     {
-        Column = column;
-        Row = row;
+        X = x;
+        Y = y;
     }
     public override string ToString()
     {
-        return $"{Column},{Row}";
+        return $"{X},{Y}";
+    }
+
+    public bool IsEmpty()
+    {
+        return Equals(this, Empty);
     }
 }

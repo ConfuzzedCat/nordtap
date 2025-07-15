@@ -1,26 +1,67 @@
 @using frontend.Components.Elements.ElementData
+@using frontend.Components.Elements.Grid.Events
 @inject ILogger<GridItem> Logger
+@inject IJSRuntime JS
 
-
-<h3>GridItem</h3>
-<div>
-    <p>Test @GridPosition</p>
+@{
+    
+}
+<div style="position: relative; @_cssStyling; bottom: auto; right: auto"
+     @ondragstart="(args) => ConvertEvent(args, OnDragStart)"
+     @ondragend="OnDragEnd"
+     @ondragover:preventDefault="true"
+     @ondrop="(args) => ConvertEvent(args, OnDrop)"
+     draggable="@Draggable.ToString()"
+     @ref="Div">
+    <p style="user-select: none;">@_rng</p>
+    @ChildContent
 </div>
 
 
 @code {
-    [CascadingParameter] public GridContainer? Parent { get; set; }
-    //[Parameter] public RenderFragment? ChildContent { get; set; }
+    /*
+     @*
+     @ondragenter="(args) => ConvertEvent(args, OnDragEnter)"
+     @ondragleave="(args) => ConvertEvent(args, OnDragLeave)"
+     @onmouseover="OnMouseOver"
+     @ondragover="(args) => ConvertEvent(args, OnDragOver)"
+    *@
+     */
+    
+    
+    [CascadingParameter] public Dictionary<GridPosition, GridItem>? ParentItems { get; set; }
+    [Parameter] public RenderFragment? ChildContent { get; set; }
     [Parameter] public GridItem? CloneItem { get; set; }
     [Parameter] public GridPosition GridPosition { get; set; }
+    
+    [Parameter] public EventCallback<MouseEventArgs>    OnMouseOver     { get; set; }
+    [Parameter] public EventCallback<GridDragEventArgs> OnDragStart     { get; set; }
+    //[Parameter] public EventCallback<GridDragEventArgs> OnDragEnd       { get; set; }
+    [Parameter] public EventCallback<GridDragEventArgs> OnDragEnter     { get; set; }
+    [Parameter] public EventCallback<GridDragEventArgs> OnDragLeave     { get; set; }
+    [Parameter] public EventCallback<GridDragEventArgs> OnDragOver      { get; set; }
+    [Parameter] public EventCallback<GridDragEventArgs> OnDrop          { get; set; }
+    [Parameter] public bool                             IsSelecting     { get; set; }
+    [Parameter] public bool                             IsSelected      { get; set; }
+    [Parameter] public bool                             IsTarget        { get; set; }
+    [Parameter] public bool                             Draggable       { get; set; }
+    
+    private ElementReference Div { get; set; }
+    private int _rng = new Random().Next();
+    private string _cssStyling = String.Empty;
+    private double startX, startY;
 
     protected override Task OnInitializedAsync()
     {
-        if (Parent is null)
+        
+        if (ParentItems is null)
         {
             throw new Exception("Parent needs to be GridContainer");
         }
 
+        startX = GridPosition.X;
+        startY = GridPosition.Y;
+        _cssStyling = CreateCssStyling(GridPosition.X, GridPosition.Y);
         if (CloneItem is not null)
         {
             Clone(CloneItem);
@@ -31,6 +72,57 @@
     private void Clone(GridItem cloneItem)
     {
         GridPosition = cloneItem.GridPosition;
+        _rng = cloneItem._rng;
+        startX = cloneItem.startX;
+        startY = cloneItem.startY;
     }
 
+    private void ConvertEvent(DragEventArgs args, EventCallback<GridDragEventArgs> eventCallback)
+    {
+        Logger.LogInformation("ConvertEvent Called.");
+        
+        var newArgs = new GridDragEventArgs(GridPosition, args);
+        eventCallback.InvokeAsync(newArgs);
+        StateHasChanged();
+    }
+
+    async Task OnDragEnd(DragEventArgs args)
+    {
+        var result = await JS.InvokeAsync<BoundingClientRect>("ParentDOMGetBoundingClientRect", [Div]);
+        
+        var x = GridPosition.X;
+        var y = GridPosition.Y;
+        
+        x = Math.Round(args.ClientX - result.X);
+        y = Math.Round(args.ClientY - result.Y);
+        var newGridPos = new GridPosition(x, y);
+        Logger.LogInformation("gridPos: {gridPos}", newGridPos);
+        ParentItems!.Remove(GridPosition);
+        GridPosition = newGridPos;
+        ParentItems.Add(GridPosition, this);
+        _cssStyling = CreateCssStyling(GridPosition.X, GridPosition.Y);
+        StateHasChanged();
+    }
+
+    private string CreateCssStyling(double x, double y)
+    {
+        return $"top: {y}px; left: {x}px;";
+    }
+    
+    public class BoundingClientRect
+    {
+        public double X { get; set; }
+        public double Y { get; set; }
+        public double Width { get; set; }
+        public double Height { get; set; }
+        public double Top { get; set; }
+        public double Right { get; set; }
+        public double Bottom { get; set; }
+        public double Left { get; set; }
+
+        public override string ToString()
+        {
+            return $"{nameof(X)}: {X}, {nameof(Y)}: {Y}, {nameof(Width)}: {Width}, {nameof(Height)}: {Height}, {nameof(Top)}: {Top}, {nameof(Right)}: {Right}, {nameof(Bottom)}: {Bottom}, {nameof(Left)}: {Left}";
+        }
+    }
 }

@@ -14,6 +14,7 @@
 <body>
 <Routes/>
 <script src="_framework/blazor.web.js"></script>
+<script> ParentDOMGetBoundingClientRect = (element, parm) => { return element.parentNode.getBoundingClientRect() ?? element.getBoundingClientRect(); }; </script>
 </body>
 
 </html>

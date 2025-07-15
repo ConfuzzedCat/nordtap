@@ -44,5 +44,6 @@
     {
         var newArgs = new GridDragEventArgs(GridPosition, args);
         eventCallback.InvokeAsync(newArgs);
+        StateHasChanged();
     }
 }

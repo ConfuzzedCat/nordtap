@@ -13,7 +13,8 @@ public class Program
 
         // Add services to the container.
         builder.Services.AddRazorComponents()
-            .AddInteractiveServerComponents();
+            .AddInteractiveServerComponents()
+            .AddCircuitOptions(options => { options.DetailedErrors = true; });
         builder.Services.AddScoped(sp => new HttpClient(new HttpClientHandler
         {
             AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Deflate,

@@ -1,101 +1,163 @@
+@using System.Diagnostics.CodeAnalysis
 @using frontend.Components.Elements.ElementData
 @using frontend.Components.Elements.Grid.Events
 @inject ILogger<GridContainer> Logger
 @rendermode InteractiveServer
+<pre>children:@Items.Count</pre>
+<div class="grid-container">
+    <CascadingValue Value="@Items">
 
-<h3>GridContainer</h3>
-<button @onclick="AddChild">addChild</button>
-
-<CascadingValue Value="this">
-    <div class="grid-container">
-        @for (int _column = 0; _column < Columns; _column++)
+        @foreach (var item in Items)
         {
-            var c = _column;
-            <GridColumn>
-                @for (int _row = 0; _row < Rows; _row++)
-                {
-                    var pos = new GridPosition(c, _row);
-                    var isEmpty = Items.TryGetValue(pos, out var item);
-                    <GridRow 
-                        GridPosition="pos"
-                        OnDragStart="OnDragStartCallback"
-                        OnDragEnd="OnDragEndCallback"
-                        OnDragEnter="OnDragEnterCallback"
-                        OnDragLeave="OnDragLeaveCallback"
-                        OnDrop="OnDropCallback"
-                        Draggable="@isEmpty"
-                        >
-                        @if (isEmpty)
-                        {
-                            <GridItem GridPosition="pos" CloneItem="item"></GridItem>
-                        }
-                        else
-                        {
-                            <GridEmptyItem GridPosition="pos"></GridEmptyItem>
-                        }
-                    </GridRow>
-                }
-            </GridColumn>
+            <GridItem CloneItem="item.Value" GridPosition="item.Key"
+                      Draggable="@true">
+
+            </GridItem>
         }
-    </div>
-</CascadingValue>
+    </CascadingValue>
+</div>
 @code {
+    
+    // Make it more of a absulote position system, instead of row and columns
     [Parameter] public int Columns { get; set; }
     [Parameter] public int Rows { get; set; }
-    //[Parameter] public EventCallback AddChild { get; set; }
-    //[Parameter] public RenderFragment? ChildContent { get; set; }
-    private Dictionary<GridPosition, GridItem> Items { get; set; } = new();
+    [Parameter] public EventCallback<GridDragEventArgs> OnDragStart { get; set; }
+    [Parameter] public EventCallback<GridDragEventArgs> OnDragEnd { get; set; }
+    [Parameter] public EventCallback<GridDragEventArgs> OnDragEnter { get; set; }
+    [Parameter] public EventCallback<GridDragEventArgs> OnDragLeave { get; set; }
+    [Parameter] public EventCallback<GridDragEventArgs> OnDrop { get; set; }
+    [Parameter] public Dictionary<GridPosition, GridItem> Items { get; set; } = new();
 
-    public bool Register(GridPosition pos, GridItem item)
+    private string _mouseEventInfo = string.Empty;
+
+    //[Parameter] public RenderFragment? ChildContent { get; set; }
+    public async Task<bool> Register(GridPosition pos, GridItem item)
     {
         try
         {
             //Logger.LogInformation("Registering item...");
             //if (!FindNextSpot(out var pos) || pos is null) return;
             Items.Add(pos, item);
-            Logger.LogInformation("Registered item at pos: {pos}", pos);
         }
         catch (ArgumentException)
         {
             Logger.LogWarning("Can't add element at pos: {pos}", pos);
             return false;
         }
-
+        StateHasChanged();
         return true;
     }
 
-    public void AddChild()
+    public async Task<GridItem> Remove(GridPosition position)
+    {
+        var flag = Items.Remove(position, out var item);
+
+        if (flag && item is not null)
+        {
+            return item;
+        }
+        throw new Exception($"Couldn't remove from position, {position}.");
+    }
+
+    public async Task AddChild()
     {
         var rand = new Random();
-        var pos = new GridPosition(rand.Next(Columns), rand.Next(Rows));
+        double x = Math.Round(rand.NextDouble() * 1900d);
+        double y = Math.Round(rand.NextDouble() * 900d);
+        var pos = new GridPosition(x, y);
         
-        var didRegister = Register(pos, new GridItem
+        var didRegister =  await Register(pos, new GridItem
         {
             GridPosition = pos,
-            Parent = this
         });
         
         Logger.LogInformation("Did it register? {didRegister}", didRegister);
-        
         StateHasChanged();
     }
 
     private void OnMouseOverCallback(MouseEventArgs obj)
     {
     }
-    private void OnDragStartCallback(GridDragEventArgs obj)
+    private async Task OnDragStartCallback(GridDragEventArgs obj)
     {
+        await OnDragStart.InvokeAsync(obj);
     }
-    private void OnDragEndCallback(GridDragEventArgs obj)
+    private async Task OnDragEndCallback(GridDragEventArgs obj)
     {
+        await OnDragEnd.InvokeAsync(obj);
     }
-    private void OnDragEnterCallback(GridDragEventArgs obj)
+    private async Task OnDragEnterCallback(GridDragEventArgs obj)
     {
+        await OnDragEnter.InvokeAsync(obj);
     }
-    private void OnDragLeaveCallback(GridDragEventArgs obj)
+    private async Task OnDragLeaveCallback(GridDragEventArgs obj)
     {
+        await OnDragLeave.InvokeAsync(obj);
     }
-    private void OnDropCallback(GridDragEventArgs obj)
+    private async Task OnDropCallback(GridDragEventArgs obj)
     {
+        //await OnDrop.InvokeAsync(obj);
+        var gridPos = obj.Position;
+        var gridItem = Items[gridPos];
+        Items.Remove(gridPos);
+
+        var newGridPos = new GridPosition(obj.ScreenX, obj.ScreenY);
+        gridItem.GridPosition = newGridPos;
+        Items.Add(newGridPos, gridItem);
+        Logger.LogInformation("Moved item to {pos}", newGridPos);
+        StateHasChanged();
+    }
+    
+    public async Task<bool> MoveItem(GridPosition oldPos, GridPosition newPos)
+    {
+        GridItem old, _new;
+        if (GetItemAtPos(oldPos, out old))
+        {
+            if (GetItemAtPos(newPos, out _new))
+            {
+                // swap Positions
+                old.GridPosition = newPos;
+                _new.GridPosition = oldPos;
+                Items.Remove(newPos);
+                Items.Remove(oldPos);
+                Items[newPos] = old;
+                Items[oldPos] = _new;
+                return true;
+            }
+            // move to new Position
+            Items.Remove(oldPos);
+            Items[newPos] = old;
+            return true;
+        }
+
+        return false;
+    }
+    
+    bool GetItemAtPos(GridPosition pos, [NotNullWhen(true)]out  GridItem? item)
+    {
+        try
+        {
+
+            if (pos.IsEmpty())
+            {
+                item = null;
+                return false;
+            }
+            bool flag = Items.TryGetValue(pos, out item);
+            if (flag)
+            {
+                if (item is null)
+                {
+                    return false;
+                }
+                return true;
+            }
+            return false;
+        }
+        catch (ArgumentNullException)
+        {
+            item = null;
+            return false;
+        }
     }
 }

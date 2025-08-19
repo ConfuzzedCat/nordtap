@@ -3,17 +3,15 @@
 @using System.Net
 @using System.Net.Http.Headers
 @using System.Text.Json
-@using backend.Extensions.Models
 @using frontend.Services
 @using frontend.Web
-@using Microsoft.AspNetCore.Authentication.Cookies
-@using Microsoft.AspNetCore.Identity
+@using Shared.Extensions.Models
 @using Cookie = frontend.Web.Cookie
 
 @inject ILogger<Login> Logger
 @inject NavigationManager NavigationManager
-@inject HttpClient HttpClient
 @inject IInternalApiService InternalApiService
+@inject CustomAuthenticationStateProvider AuthenticationStateProvider
 @* @inject IdentityRedirectManager RedirectManager *@
 
 <h3>Login</h3>
@@ -62,7 +60,7 @@
 @code {
     private string? errorMessage;
 
-    [CascadingParameter] private HttpContext HttpContext { get; set; } = default!;
+    //[CascadingParameter] private HttpContext HttpContext { get; set; } = default!;
 
     // ReSharper disable once AutoPropertyCanBeMadeGetOnly.Local
     [SupplyParameterFromForm] private InputModel Input { get; set; } = new();
@@ -74,12 +72,12 @@
     {
         // This doesn't count login failures towards account lockout
         // To enable password failures to trigger account lockout, set lockoutOnFailure: true
-        var cookie = await InternalApiService.PostLogin(Input.ToRequest());
-
-        if (cookie.IsEmpty() == false)
+        await InternalApiService.PostLogin(Input.ToRequest());
+        
+        if (await AuthenticationStateProvider.IsAuthenticatedAsync())
         {
-            HttpContext.Response.Cookies.Append(cookie.Key, cookie.Value, cookie.Options);
-            NavigationManager.NavigateTo(ReturnUrl);
+            //HttpContext.Response.Cookies.Append(cookie.Key, cookie.Value, cookie.Options);
+            NavigationManager.NavigateTo(ReturnUrl ?? "/");
         }
         
         /*

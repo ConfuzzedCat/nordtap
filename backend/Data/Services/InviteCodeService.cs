@@ -1,7 +1,7 @@
 using backend.Data.Context;
-using backend.Data.Entities;
 using backend.Data.Services.Interfaces;
 using Microsoft.EntityFrameworkCore;
+using Shared.Data.Entities;
 
 namespace backend.Data.Services;
 

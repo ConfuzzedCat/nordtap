@@ -1,4 +1,4 @@
-namespace backend.Extensions.Models;
+namespace Shared.Extensions.Models;
 
 /// <summary>
 /// The request type for the "/manage/info" endpoint added by <see cref="IdentityApiEndpointRouteBuilderExtensions.MapIdentityApiCustom"/>.

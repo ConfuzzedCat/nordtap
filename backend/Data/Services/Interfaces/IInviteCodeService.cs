@@ -1,4 +1,4 @@
-using backend.Data.Entities;
+using Shared.Data.Entities;
 
 namespace backend.Data.Services.Interfaces;
 

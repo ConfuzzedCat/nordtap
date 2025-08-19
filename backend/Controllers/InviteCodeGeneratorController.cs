@@ -1,9 +1,9 @@
 using System.Security.Claims;
-using backend.Data.Entities;
 using backend.Data.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Shared.Data.Entities;
 
 namespace backend.Controllers;
 

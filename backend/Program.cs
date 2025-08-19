@@ -94,12 +94,8 @@ public class Program
 
         app.MapControllers();
         app.MapIdentityApiCustom();
-
-        app.UseHttpsRedirection();
-
-        app.UseAuthorization();
-
-        app.MapControllers();
+        app.MapHub<ChatHub>("/ChatHub");
+        
         
         using (var scope = app.Services.CreateScope())
         {

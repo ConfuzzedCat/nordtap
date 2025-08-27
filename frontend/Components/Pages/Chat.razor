@@ -1,7 +1,9 @@
 @page "/Chat"
 @rendermode InteractiveWebAssembly
+@using frontend.Web
 @using Microsoft.AspNetCore.SignalR.Client
 @inject NavigationManager Navigation
+@inject CookieDelegatingHandler CookieDelegatingHandler
 @implements IAsyncDisposable
 
 
@@ -39,7 +41,10 @@
     protected override async Task OnInitializedAsync()
     {
         hubConnection = new HubConnectionBuilder()
-            .WithUrl(Navigation.ToAbsoluteUri("/ChatHub"))
+            .WithUrl("http://localhost:5296/ChatHub", (opt) =>
+            { 
+                //opt.HttpMessageHandlerFactory = _ => CookieDelegatingHandler;
+            })
             .Build();
 
         hubConnection.On<string, string>("ReceiveMessage", (user, message) =>

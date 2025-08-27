@@ -9,6 +9,8 @@ namespace backend.Data.Context;
 public class DataContext : IdentityDbContext<User>
 {
     public DbSet<InviteCode> InviteCodesDb { get; set; }
+    public DbSet<ChatMessage> ChatMessagesDb { get; set; }
+    public DbSet<ChatMessage> HubMessagesDb { get; set; }
     public DataContext()
     {
     }
@@ -21,5 +23,11 @@ public class DataContext : IdentityDbContext<User>
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
+        modelBuilder.Entity<ChatMessage>()
+            .Property(b => b.Timestamp)
+            .HasDefaultValueSql("getutcdate()");
+        modelBuilder.Entity<HubMessage>()
+            .Property(b => b.Timestamp)
+            .HasDefaultValueSql("getutcdate()");
     }
 }

@@ -21,6 +21,16 @@ public class Program
         var builder = WebApplication.CreateBuilder(args);
 
         // Add services to the container.
+        builder.Services.AddCors(opt =>
+        {
+            opt.AddPolicy("BlazorWASM", policyBuilder =>
+            {
+                policyBuilder.WithOrigins("https://localhost:7151","http://localhost:5247")
+                    .AllowAnyHeader()
+                    .AllowAnyMethod()
+                    .AllowCredentials();
+            });
+        });
         builder.Services.AddHttpContextAccessor();
         builder.Services.AddScoped<IInviteCodeService, InviteCodeService>();
         builder.Services.AddSignalR();
@@ -66,16 +76,6 @@ public class Program
             options.ExpireTimeSpan = TimeSpan.FromDays(365);
         });
         
-        builder.Services.AddCors(opt =>
-        {
-            opt.AddPolicy("BlazorWASM", policyBuilder =>
-            {
-                policyBuilder.WithOrigins("https://localhost:7151","http://localhost:5247")
-                    .AllowAnyHeader()
-                    .AllowAnyMethod()
-                    .AllowCredentials();
-            });
-        });
         
         var app = builder.Build();
 

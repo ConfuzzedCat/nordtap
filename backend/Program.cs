@@ -33,6 +33,8 @@ public class Program
         });
         builder.Services.AddHttpContextAccessor();
         builder.Services.AddScoped<IInviteCodeService, InviteCodeService>();
+        builder.Services.AddScoped<IHubMessageService>(); // TODO: make implementation
+        builder.Services.AddScoped<IChatMessageService>(); // TODO: make implementation
         builder.Services.AddSignalR();
         builder.Services.AddResponseCompression(opts =>
         {

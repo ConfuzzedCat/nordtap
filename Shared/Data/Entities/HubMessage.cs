@@ -9,4 +9,9 @@ public class HubMessage
     public DateTime Timestamp { get; set; }
     public string Group { get; set; }
     public string Message { get; set; }
+
+    public override string ToString()
+    {
+        return Message;
+    }
 }

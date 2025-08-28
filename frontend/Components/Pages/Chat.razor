@@ -2,19 +2,31 @@
 @rendermode InteractiveWebAssembly
 @using frontend.Web
 @using Microsoft.AspNetCore.SignalR.Client
+@using Shared.Data.Entities
+@using Shared.Hubs.Infrastructure
+@using Shared.Hubs.Interfaces
+@using Shared.Utils
 @inject NavigationManager Navigation
 @inject CookieDelegatingHandler CookieDelegatingHandler
 @implements IAsyncDisposable
+@implements Shared.Hubs.Interfaces.IChatHubClient
 
 
 <PageTitle>Chat</PageTitle>
 
 <div class="form-group">
     <label>
-        User:
-        <input @bind="userInput" />
+        group:
+        <input @bind="hubGroup" />
     </label>
 </div>
+<div class="form-group">
+    <label>
+        password:
+        <input @bind="password" />
+    </label>
+</div>
+<button @onclick="JoinGroup" disabled="@(!IsConnected)">Join group</button>
 <div class="form-group">
     <label>
         Message:
@@ -22,11 +34,12 @@
     </label>
 </div>
 <button @onclick="Send" disabled="@(!IsConnected)">Send</button>
+<button @onclick="LeaveGroup" disabled="@(!IsConnected)">Leave Group</button>
 
 <hr>
 
 <ul id="messagesList">
-    @foreach (var message in messages)
+    @foreach (var message in _messages)
     {
         <li>@message</li>
     }
@@ -34,9 +47,11 @@
 
 @code {
     private HubConnection? hubConnection;
-    private List<string> messages = [];
-    private string? userInput;
+    private IChatHub hubProxy = default!;
+    private List<HubMessage> _messages = [];
     private string? messageInput;
+    private string? hubGroup;
+    private string password = string.Empty;
 
     protected override async Task OnInitializedAsync()
     {
@@ -46,22 +61,17 @@
                 //opt.HttpMessageHandlerFactory = _ => CookieDelegatingHandler;
             })
             .Build();
-
-        hubConnection.On<string, string>("ReceiveMessage", (user, message) =>
-        {
-            var encodedMsg = $"{user}: {message}";
-            messages.Add(encodedMsg);
-            InvokeAsync(StateHasChanged);
-        });
+        hubProxy = hubConnection.ServerProxy<IChatHub>();
+        _ = hubConnection.ClientRegistration<IChatHubClient>(this);
 
         await hubConnection.StartAsync();
     }
 
     private async Task Send()
     {
-        if (hubConnection is not null)
+        if (hubConnection is not null && hubGroup is not null && string.IsNullOrWhiteSpace(messageInput) == false)
         {
-            await hubConnection.SendAsync("SendMessage", userInput, messageInput);
+            await hubProxy.CreateMessage(hubGroup, messageInput);
         }
     }
 
@@ -74,5 +84,58 @@
         {
             await hubConnection.DisposeAsync();
         }
+
+        _messages = [];
     }
+
+    public Task MessagesLoaded(List<HubMessage> messages)
+    {
+        _messages = messages;
+        StateHasChanged();
+        return Task.CompletedTask;
+    }
+
+    public Task MessageReceived(HubMessage message)
+    {
+        _messages.Add(message);
+        StateHasChanged();
+        return Task.CompletedTask;
+    }
+
+    public Task MessageDeleted(Guid id)
+    {
+        var hubMessages = _messages.Where(msg => msg.Id != id);
+        _messages = hubMessages.ToList();
+        StateHasChanged();
+        return Task.CompletedTask;
+    }
+
+    public Task MessagesDeleted(IEnumerable<Guid> ids)
+    {
+        var hubMessages = _messages.Where(msg => ids.Contains(msg.Id) == false);
+        _messages = hubMessages.ToList();
+        StateHasChanged();
+        return Task.CompletedTask;
+    }
+
+    private async Task JoinGroup()
+    {
+        if (hubGroup is null)
+        {
+            return;
+        }
+        
+        var hash = HashUtil.Sha256String(password);
+        await hubProxy.AddToGroup(hubGroup, hash);
+    }
+
+    private async Task LeaveGroup()
+    {
+        if (hubGroup is null)
+        {
+            return;
+        }
+        await hubProxy.RemoveFromGroup(hubGroup);
+    }
+
 }

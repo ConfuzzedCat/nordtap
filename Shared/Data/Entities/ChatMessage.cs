@@ -10,4 +10,9 @@ public class ChatMessage : HubMessage
     {
         
     }
+
+    public override string ToString()
+    {
+        return $"{Sender.UserName}: {Message}";
+    }
 }

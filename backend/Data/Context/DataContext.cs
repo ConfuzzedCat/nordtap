@@ -10,7 +10,7 @@ public class DataContext : IdentityDbContext<User>
 {
     public DbSet<InviteCode> InviteCodesDb { get; set; }
     public DbSet<ChatMessage> ChatMessagesDb { get; set; }
-    public DbSet<ChatMessage> HubMessagesDb { get; set; }
+    public DbSet<HubMessage> HubMessagesDb { get; set; }
     public DataContext()
     {
     }

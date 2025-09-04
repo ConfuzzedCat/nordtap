@@ -20,7 +20,6 @@
 
 Welcome to your new app.
 <button @onclick="AddChild">addChild</button> 
-<button @onclick="AddCol">addRow</button> 
 
 <GridContainer @ref="_child">
 </GridContainer>
@@ -42,9 +41,6 @@ Welcome to your new app.
     [CascadingParameter] private HttpContext HttpContext { get; set; } = default!;
 
     GridContainer _child = null!;
-    private GridPosition SelectedPosition { get; set; }
-    private int gridCol = 3;
-
     private string _username = string.Empty;
     protected override async Task OnInitializedAsync()
     {
@@ -67,60 +63,8 @@ Welcome to your new app.
         }
     }
     
-    private void OnDragStart(GridDragEventArgs eventArgs)
-    {
-        SelectedPosition = eventArgs.Position;
-    }
-
-
-    private async Task OnDrop(GridDragEventArgs eventArgs)
-    {
-        GridItem? gridItemOld, gridItemNew = null;
-        bool doesSecondItemExist = false;
-        try
-        {
-            gridItemOld = await _child.Remove(SelectedPosition);
-        }
-        catch (Exception e)
-        {
-            Logger.LogError(e, "Couldn't find first grid item selected.");
-            return;
-        }
-        try
-        {
-            gridItemNew = await _child.Remove(eventArgs.Position);
-            doesSecondItemExist = true;
-        }
-        catch (Exception)
-        {
-            doesSecondItemExist = false;
-        }
-
-        bool didFirstRegister, didSecondRegister = false;
-        didFirstRegister = await _child.Register(eventArgs.Position, gridItemOld);
-        if (doesSecondItemExist)
-        {
-            didSecondRegister = await _child.Register(SelectedPosition, gridItemNew);
-        }
-        Logger.LogInformation("Did first register: {first}. Did second register: {second}", didFirstRegister, didSecondRegister);
-        
-        //await _child.MoveItem(SelectedPosition, eventArgs.Position);
-        StateHasChanged();
-    }
-
-    private void OnDragEnd(GridDragEventArgs eventArgs)
-    {
-        SelectedPosition = GridPosition.Empty;
-    }
-
     public async Task AddChild()
     {
         await _child.AddChild();
     }
-
-    private void AddCol()
-    {
-        gridCol++;
-    }
-
 }

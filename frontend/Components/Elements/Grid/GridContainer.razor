@@ -6,12 +6,10 @@
 <pre>children:@Items.Count</pre>
 <div class="grid-container">
     <CascadingValue Value="@Items">
-
         @foreach (var item in Items)
         {
             <GridItem CloneItem="item.Value" GridPosition="item.Key"
-                      Draggable="@true">
-
+                      Draggable="@true" GridKernelSizeX="10" GridKernelSizeY="10">
             </GridItem>
         }
     </CascadingValue>
@@ -27,9 +25,8 @@
     [Parameter] public EventCallback<GridDragEventArgs> OnDragLeave { get; set; }
     [Parameter] public EventCallback<GridDragEventArgs> OnDrop { get; set; }
     [Parameter] public Dictionary<GridPosition, GridItem> Items { get; set; } = new();
-
-    private string _mouseEventInfo = string.Empty;
-
+    
+    
     //[Parameter] public RenderFragment? ChildContent { get; set; }
     public async Task<bool> Register(GridPosition pos, GridItem item)
     {
@@ -69,6 +66,7 @@
         var didRegister =  await Register(pos, new GridItem
         {
             GridPosition = pos,
+            ChildContent = @<img class="card-img" src="https://cards.scryfall.io/large/front/4/f/4f663979-a778-4fb2-97c4-67ab82926f13.jpg"/>
         });
         
         Logger.LogInformation("Did it register? {didRegister}", didRegister);

@@ -5,6 +5,9 @@
 
     width: var(--max-width);
     height: var(--max-height);
+    
+    max-width: var(--max-width);
+    max-height: 100%;
 
     display: flex;
     flex-direction: row;

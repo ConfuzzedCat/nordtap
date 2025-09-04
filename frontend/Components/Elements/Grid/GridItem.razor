@@ -1,128 +1,149 @@
 @using frontend.Components.Elements.ElementData
 @using frontend.Components.Elements.Grid.Events
+@using frontend.Web
 @inject ILogger<GridItem> Logger
-@inject IJSRuntime JS
+@inject IJSRuntime Js
 
-@{
-    
-}
-<div style="position: relative; @_cssStyling; bottom: auto; right: auto"
-     @ondragstart="(args) => ConvertEvent(args, OnDragStart)"
-     @ondragend="OnDragEnd"
+
+<div style="position: absolute; @_cssStyling; bottom: auto; right: auto"
      @ondragover:preventDefault="true"
-     @ondrop="(args) => ConvertEvent(args, OnDrop)"
+     @onmouseover="async (args) => { ;await ConvertEvent(args, OnMouseOverCallback); }"
+     @ondragstart="async (args) => { OnDragStart(args); await ConvertEvent(args, OnDragStartCallback); }"
+     @ondragend="async (args) => { await OnDragEnd(args); await ConvertEvent(args, OnDragEndCallback); }"
+     @ondrop="async (args) => { ; await ConvertEvent(args, OnDropCallback); }"
+
      draggable="@Draggable.ToString()"
-     @ref="Div">
-    <p style="user-select: none;">@_rng</p>
+     @ref="ItemContainerReference">
     @ChildContent
 </div>
 
 
 @code {
-    /*
-     @*
-     @ondragenter="(args) => ConvertEvent(args, OnDragEnter)"
-     @ondragleave="(args) => ConvertEvent(args, OnDragLeave)"
-     @onmouseover="OnMouseOver"
-     @ondragover="(args) => ConvertEvent(args, OnDragOver)"
-    *@
-     */
+    [CascadingParameter] public Dictionary<GridPosition, GridItem> ParentItems { get; set; }
     
-    
-    [CascadingParameter] public Dictionary<GridPosition, GridItem>? ParentItems { get; set; }
     [Parameter] public RenderFragment? ChildContent { get; set; }
     [Parameter] public GridItem? CloneItem { get; set; }
     [Parameter] public GridPosition GridPosition { get; set; }
     
-    [Parameter] public EventCallback<MouseEventArgs>    OnMouseOver     { get; set; }
-    [Parameter] public EventCallback<GridDragEventArgs> OnDragStart     { get; set; }
-    //[Parameter] public EventCallback<GridDragEventArgs> OnDragEnd       { get; set; }
-    [Parameter] public EventCallback<GridDragEventArgs> OnDragEnter     { get; set; }
-    [Parameter] public EventCallback<GridDragEventArgs> OnDragLeave     { get; set; }
-    [Parameter] public EventCallback<GridDragEventArgs> OnDragOver      { get; set; }
-    [Parameter] public EventCallback<GridDragEventArgs> OnDrop          { get; set; }
-    [Parameter] public bool                             IsSelecting     { get; set; }
-    [Parameter] public bool                             IsSelected      { get; set; }
-    [Parameter] public bool                             IsTarget        { get; set; }
-    [Parameter] public bool                             Draggable       { get; set; }
+    [Parameter] public EventCallback<MouseEventArgs>     OnMouseMoveCallback     { get; set; }
+    [Parameter] public EventCallback<GridMouseEventArgs> OnMouseOverCallback     { get; set; }
+    [Parameter] public EventCallback<GridDragEventArgs>  OnDragStartCallback     { get; set; }
+    [Parameter] public EventCallback<GridDragEventArgs>  OnDragEndCallback       { get; set; }
+    [Parameter] public EventCallback<GridDragEventArgs>  OnDragEnterCallback     { get; set; }
+    [Parameter] public EventCallback<GridDragEventArgs>  OnDragLeaveCallback     { get; set; }
+    [Parameter] public EventCallback<GridDragEventArgs>  OnDragOverCallback      { get; set; }
+    [Parameter] public EventCallback<GridDragEventArgs>  OnDropCallback          { get; set; }
+    [Parameter] public bool                              IsSelecting     { get; set; }
+    [Parameter] public bool                              IsSelected      { get; set; }
+    [Parameter] public bool                              IsTarget        { get; set; }
+    [Parameter] public bool                              Draggable       { get; set; }
+    [Parameter] public double                            GridKernelSizeX       { get; set; }
+    [Parameter] public double                            GridKernelSizeY       { get; set; }
     
-    private ElementReference Div { get; set; }
-    private int _rng = new Random().Next();
+    private ElementReference ItemContainerReference { get; set; }
     private string _cssStyling = String.Empty;
-    private double startX, startY;
+    private double _startX, _startY, _previewX, _previewY;
+    private bool _isHovering;
 
     protected override Task OnInitializedAsync()
     {
-        
         if (ParentItems is null)
         {
             throw new Exception("Parent needs to be GridContainer");
         }
 
-        startX = GridPosition.X;
-        startY = GridPosition.Y;
+        GridPosition = new GridPosition(
+            CalculateGridKernelPosition(GridPosition.X, GridKernelSizeX),
+            CalculateGridKernelPosition(GridPosition.Y, GridKernelSizeY));
+
+        _startX = GridPosition.X;
+        _startY = GridPosition.Y;
         _cssStyling = CreateCssStyling(GridPosition.X, GridPosition.Y);
         if (CloneItem is not null)
         {
             Clone(CloneItem);
         }
+
+        if (GridKernelSizeX == 0)
+        {
+            GridKernelSizeX = 5;
+        }
+        if (GridKernelSizeY == 0)
+        {
+            GridKernelSizeY = 5;
+        }
+        
         return base.OnInitializedAsync();
     }
 
     private void Clone(GridItem cloneItem)
     {
+        ChildContent = cloneItem.ChildContent;
         GridPosition = cloneItem.GridPosition;
-        _rng = cloneItem._rng;
-        startX = cloneItem.startX;
-        startY = cloneItem.startY;
+        _startX = cloneItem._startX;
+        _startY = cloneItem._startY;
     }
 
-    private void ConvertEvent(DragEventArgs args, EventCallback<GridDragEventArgs> eventCallback)
+    private async Task ConvertEvent(DragEventArgs args, EventCallback<GridDragEventArgs> eventCallback)
     {
         Logger.LogInformation("ConvertEvent Called.");
         
         var newArgs = new GridDragEventArgs(GridPosition, args);
-        eventCallback.InvokeAsync(newArgs);
+        await eventCallback.InvokeAsync(newArgs);
+        StateHasChanged();
+    }
+    
+    private async Task ConvertEvent(MouseEventArgs args, EventCallback<GridMouseEventArgs> eventCallback)
+    {
+        Logger.LogInformation("ConvertEvent Called.");
+        var newArgs = new GridMouseEventArgs(GridPosition, args);
+        await eventCallback.InvokeAsync(newArgs);
         StateHasChanged();
     }
 
+    void OnDragStart(DragEventArgs args)
+    {
+    }
+    
     async Task OnDragEnd(DragEventArgs args)
     {
-        var result = await JS.InvokeAsync<BoundingClientRect>("ParentDOMGetBoundingClientRect", [Div]);
+        var parentBoundingClientRect = await Js.InvokeAsync<BoundingClientRect>(
+            "ParentDOMGetBoundingClientRect", 
+            [ItemContainerReference]);
+        Logger.LogInformation("Bounding box: {box}", parentBoundingClientRect);
+        var x = 
+            Math.Clamp(
+                Math.Round(args.ClientX - parentBoundingClientRect.X), 
+                0, 
+                Math.Round(parentBoundingClientRect.Width - GridKernelSizeX));
+        var y = 
+            Math.Clamp(
+                Math.Round(args.ClientY - parentBoundingClientRect.Y), 
+                0, 
+                Math.Round(parentBoundingClientRect.Height - GridKernelSizeY));
         
-        var x = GridPosition.X;
-        var y = GridPosition.Y;
-        
-        x = Math.Round(args.ClientX - result.X);
-        y = Math.Round(args.ClientY - result.Y);
+        x = CalculateGridKernelPosition(x, GridKernelSizeX);
+        y = CalculateGridKernelPosition(y, GridKernelSizeY);
         var newGridPos = new GridPosition(x, y);
+        if (ParentItems.ContainsKey(newGridPos))
+        {
+            return;
+        }
         Logger.LogInformation("gridPos: {gridPos}", newGridPos);
-        ParentItems!.Remove(GridPosition);
+        ParentItems.Remove(GridPosition);
         GridPosition = newGridPos;
         ParentItems.Add(GridPosition, this);
         _cssStyling = CreateCssStyling(GridPosition.X, GridPosition.Y);
         StateHasChanged();
     }
 
+    private double CalculateGridKernelPosition(double number, double gridKernel)
+    {
+        return Math.Round((number / gridKernel)) * gridKernel;
+    }
+
     private string CreateCssStyling(double x, double y)
     {
         return $"top: {y}px; left: {x}px;";
-    }
-    
-    public class BoundingClientRect
-    {
-        public double X { get; set; }
-        public double Y { get; set; }
-        public double Width { get; set; }
-        public double Height { get; set; }
-        public double Top { get; set; }
-        public double Right { get; set; }
-        public double Bottom { get; set; }
-        public double Left { get; set; }
-
-        public override string ToString()
-        {
-            return $"{nameof(X)}: {X}, {nameof(Y)}: {Y}, {nameof(Width)}: {Width}, {nameof(Height)}: {Height}, {nameof(Top)}: {Top}, {nameof(Right)}: {Right}, {nameof(Bottom)}: {Bottom}, {nameof(Left)}: {Left}";
-        }
     }
 }

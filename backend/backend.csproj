@@ -24,8 +24,12 @@
     </ItemGroup>
 
     <ItemGroup>
-      <Folder Include="Data\Entities\" />
-      <Folder Include="Hubs\Interfaces\" />
+      <Reference Include="Microsoft.AspNet.SignalR.Client">
+        <HintPath>..\..\..\.nuget\packages\microsoft.aspnet.signalr.client\2.0.3\lib\net45\Microsoft.AspNet.SignalR.Client.dll</HintPath>
+      </Reference>
+      <Reference Include="Microsoft.AspNetCore.SignalR.Client.Core">
+        <HintPath>..\..\..\.nuget\packages\microsoft.aspnetcore.signalr.client.core\9.0.8\lib\net9.0\Microsoft.AspNetCore.SignalR.Client.Core.dll</HintPath>
+      </Reference>
     </ItemGroup>
 
 </Project>

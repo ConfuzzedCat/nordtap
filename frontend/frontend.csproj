@@ -23,6 +23,7 @@
 
     <ItemGroup>
       <Folder Include="Components\Elements\" />
+      <Folder Include="Extensions\" />
       <Folder Include="Middleware\" />
       <Folder Include="wwwroot\js\" />
       <Folder Include="wwwroot\lib\" />

@@ -11,7 +11,8 @@ public class User : IdentityUser
     public TimeSpan GameTime { get; set; }
     public DateTime CreationDate { get; set; }
     public Guid? InviteCode { get; set; }
-    public bool isDeleted { get; set; }
+    public bool IsDeleted { get; set; }
+    public string? SignalrConnectionId { get; set; }
 
     public User()
     {
@@ -21,7 +22,7 @@ public class User : IdentityUser
         GameTotal = 0;
         GameTime = TimeSpan.Zero;
         CreationDate = DateTime.UtcNow;
-        isDeleted = false;
+        IsDeleted = false;
     }
 
     public User(string username) : base(username)
@@ -32,7 +33,7 @@ public class User : IdentityUser
         GameTotal = 0;
         GameTime = TimeSpan.Zero;
         CreationDate = DateTime.UtcNow;
-        isDeleted = false;
+        IsDeleted = false;
     }
 
     public User(Guid _InviteCode) : this()

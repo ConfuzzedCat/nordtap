@@ -33,8 +33,8 @@ public class Program
         });
         builder.Services.AddHttpContextAccessor();
         builder.Services.AddScoped<IInviteCodeService, InviteCodeService>();
-        builder.Services.AddScoped<IHubMessageService>(); // TODO: make implementation
-        builder.Services.AddScoped<IChatMessageService>(); // TODO: make implementation
+        builder.Services.AddScoped<IChatMessageService, ChatMessageService>();
+        builder.Services.AddScoped<IRoomService, RoomService>();
         builder.Services.AddSignalR();
         builder.Services.AddResponseCompression(opts =>
         {
@@ -91,6 +91,7 @@ public class Program
         app.UseHttpsRedirection();
         app.UseCors("BlazorWASM");
 
+        app.UseAuthentication();
         app.UseAuthorization();
         app.UseResponseCompression();
 

@@ -10,7 +10,7 @@ public class DataContext : IdentityDbContext<User>
 {
     public DbSet<InviteCode> InviteCodesDb { get; set; }
     public DbSet<ChatMessage> ChatMessagesDb { get; set; }
-    public DbSet<HubMessage> HubMessagesDb { get; set; }
+    public DbSet<Room> RoomsDb { get; set; }
     public DataContext()
     {
     }
@@ -25,9 +25,6 @@ public class DataContext : IdentityDbContext<User>
         base.OnModelCreating(modelBuilder);
         modelBuilder.Entity<ChatMessage>()
             .Property(b => b.Timestamp)
-            .HasDefaultValueSql("getutcdate()");
-        modelBuilder.Entity<HubMessage>()
-            .Property(b => b.Timestamp)
-            .HasDefaultValueSql("getutcdate()");
+            .HasDefaultValueSql("current_timestamp");
     }
 }

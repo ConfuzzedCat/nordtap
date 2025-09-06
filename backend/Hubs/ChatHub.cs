@@ -1,83 +1,177 @@
 using System.Collections.Concurrent;
 using backend.Data.Services.Interfaces;
+using Microsoft.AspNet.SignalR.Client.Hubs;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.SignalR;
 using Shared.Data.Entities;
 using Shared.Hubs.Interfaces;
+using Shared.Utils;
 
 namespace backend.Hubs;
 
 public class ChatHub : Hub<IChatHubClient>, IChatHub
 {
     private readonly IChatMessageService  _chatMessageService;
-    private readonly IHubMessageService  _hubMessageService;
+    private readonly IRoomService _roomService;
     private readonly UserManager<User> _userManager;
     private readonly ILogger<ChatHub> _logger;
-    private readonly ConcurrentDictionary<string, string> _groups;
+    //private readonly ConcurrentDictionary<string, string> _groups;
 
     public ChatHub(IChatMessageService chatMessageService,
-        IHubMessageService hubMessageService,
         UserManager<User> userManager,
-        ILogger<ChatHub> logger)
+        ILogger<ChatHub> logger, IRoomService roomService)
     {
         _chatMessageService = chatMessageService;
-        _hubMessageService = hubMessageService;
         _userManager = userManager;
         _logger = logger;
-        _groups = [];
+        _roomService = roomService;
     }
-    
-    public async Task<bool> AddToGroup(string groupName, string passwordHash)
+
+
+    public override async Task OnConnectedAsync()
     {
-        var created = _groups.TryAdd(groupName, passwordHash);
-        if (created == false)
+
+        var claims = Context.User;
+        var user = await _userManager.GetUserAsync(claims);
+        if (user == null)
         {
-            if (_groups[groupName] != passwordHash)
+            return;
+        }
+
+        if (user.SignalrConnectionId is not null && user.SignalrConnectionId != Context.ConnectionId)
+        {
+            return;
+        }
+        
+        
+        await base.OnConnectedAsync();  
+    }
+
+    public override async Task OnDisconnectedAsync(Exception? exception)
+    {
+        var claims = Context.User;
+        var user = await _userManager.GetUserAsync(claims);
+        if (user == null)
+        {
+            return;
+        }
+
+        user.SignalrConnectionId = null;
+        await _userManager.UpdateAsync(user);
+
+        var roomsUserIsIn = await _roomService.GetAllRoomsUserIsIn(user);
+
+        foreach (var room in roomsUserIsIn)
+        {
+            await RemoveFromGroup(room.Name);
+            if (room.Owner.Id == user.Id)
             {
-                _logger.LogInformation("Wrong password for {GroupName}.", groupName);
+                await DeleteGroup(room.Name);
+            }
+        }
+
+        //await Groups.RemoveFromGroupAsync(Context.ConnectionId, claims);
+
+        await base.OnDisconnectedAsync(exception);
+    }
+
+    public async Task<bool> AddToGroup(string groupName, string password)
+    {
+        password = HashUtil.Sha256String(password);
+        var claims = Context.User;
+        if (claims == null)
+        {
+            _logger.LogError("Claims are null, user is not logged in.");
+            return false;
+        }
+        var user = await _userManager.GetUserAsync(claims);
+        if (user == null)
+        {
+            _logger.LogError("User is not found.");
+            return false;
+        }
+        user.SignalrConnectionId = Context.ConnectionId;
+        await _userManager.UpdateAsync(user);
+        
+        var room = await _roomService.Read(groupName);
+        if (room == null)
+        {
+            room = await _roomService.Create(new Room
+            {
+                Name = groupName,
+                MaxAmountOfUser = 5,
+                Owner = user,
+                Password = password,
+                Users = [user]
+            });
+        }
+        else
+        {
+            if (room.Password != password)
+            {
+                _logger.LogError("Passwords do not match.");
                 return false;
             }
         }
+
+        
         await Groups.AddToGroupAsync(Context.ConnectionId, groupName);
-        var sysMessage = new HubMessage
+        var sysMessage = new ChatMessage
         {
             Group = groupName,
-            Message = $"{Context.UserIdentifier} has joined the group {groupName}."
+            Message = $"{user.UserName} has joined the group {groupName}."
         };
-        await CreateMessage(sysMessage);
+        await CreateChatMessage(sysMessage);
+        await LoadMessages(groupName);
         return true;
     }
 
     public async Task RemoveFromGroup(string groupName)
     {
+        //TODO: delete room if last user leaves or if they are the owner.
         await Groups.RemoveFromGroupAsync(Context.ConnectionId, groupName);
-        var sysMessage = new HubMessage
+        var sysMessage = new ChatMessage
         {
             Group = groupName,
-            Message = $"{Context.UserIdentifier} has left the group {groupName}."
+            Message = $"{Context.User.Identity.Name} has left the group {groupName}."
         };
-        await CreateMessage(sysMessage);
+        await CreateChatMessage(sysMessage);
+    }
+
+    public async Task DeleteGroup(string groupName)
+    {
+        var room = await _roomService.Read(groupName);
+        if (room == null)
+        {
+            return;
+        }
+
+        foreach (var user in room.Users)
+        {
+            if (user.SignalrConnectionId is null)
+            {
+                continue;
+            }
+            await Groups.RemoveFromGroupAsync(user.SignalrConnectionId, groupName);
+        }
+
+        var messages = await _chatMessageService.GetAllGroupChatMessages(groupName);
+        await _chatMessageService.DeleteRange(messages);
+        await _roomService.Delete(groupName);
     }
 
     public async Task LoadMessages(string groupName)
     {
-        var chatMessages = await _chatMessageService.GetAllGroupChatMessages(groupName);
-        var hubMessages = await _hubMessageService.GetAllGroupHubMessages(groupName);
-        var messages = chatMessages.Concat(hubMessages).OrderByDescending(msg => msg.Timestamp);
+        var messages = await _chatMessageService.GetAllGroupChatMessages(groupName);
+        messages.Sort((x, y) => y.Timestamp.CompareTo(x.Timestamp) * -1);
         
-        await Clients.Group(groupName).MessagesLoaded(messages.ToList());
+        await Clients.Group(groupName).MessagesLoaded(messages);
     }
 
     public async Task CreateChatMessage(ChatMessage chatMessage)
     {
         await _chatMessageService.Create(chatMessage);
-        await Clients.Group(chatMessage.Group).MessageReceived(chatMessage);
-    }
-
-    public async Task CreateMessage(HubMessage message)
-    {
-        await _hubMessageService.Create(message);
-        await Clients.Group(message.Group).MessageReceived(message);
+        await Clients.Group(chatMessage.Group).ChatMessageReceived(chatMessage);
     }
 
     public async Task CreateMessage(string group, string message)
@@ -97,14 +191,14 @@ public class ChatHub : Hub<IChatHubClient>, IChatHub
             return;
         }
 
-        var chatMessage = new ChatMessage()
+        var chatMessage = new ChatMessage
         {
             Message = message,
-            Group = "",
+            Group = group,
             Sender = user
         };
         await _chatMessageService.Create(chatMessage);
-        await Clients.Group(chatMessage.Group).MessageReceived(chatMessage);
+        await Clients.Group(chatMessage.Group).ChatMessageReceived(chatMessage);
     }
 
     public async Task ClearMessages(string groupName)

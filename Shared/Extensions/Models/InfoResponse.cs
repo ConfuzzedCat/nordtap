@@ -57,7 +57,7 @@ public sealed class InfoResponse
             GameTime = user.GameTime,
             CreationDate = user.CreationDate,
             InviteCode = user.InviteCode,
-            isDeleted = user.isDeleted,
+            isDeleted = user.IsDeleted,
             Id = user.Id,
             Roles = roles
         };

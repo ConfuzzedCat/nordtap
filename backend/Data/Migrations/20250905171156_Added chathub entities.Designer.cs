@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using backend.Data.Context;
@@ -11,9 +12,11 @@ using backend.Data.Context;
 namespace backend.Data.Migrations
 {
     [DbContext(typeof(DataContext))]
-    partial class DataContextModelSnapshot : ModelSnapshot
+    [Migration("20250905171156_Added chathub entities")]
+    partial class Addedchathubentities
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -154,11 +157,16 @@ namespace backend.Data.Migrations
                     b.ToTable("AspNetUserTokens", (string)null);
                 });
 
-            modelBuilder.Entity("Shared.Data.Entities.ChatMessage", b =>
+            modelBuilder.Entity("Shared.Data.Entities.HubMessage", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
+
+                    b.Property<string>("Discriminator")
+                        .IsRequired()
+                        .HasMaxLength(13)
+                        .HasColumnType("character varying(13)");
 
                     b.Property<string>("Group")
                         .IsRequired()
@@ -168,9 +176,6 @@ namespace backend.Data.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
-                    b.Property<string>("SenderId")
-                        .HasColumnType("text");
-
                     b.Property<DateTime>("Timestamp")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("timestamp with time zone")
@@ -178,9 +183,11 @@ namespace backend.Data.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("SenderId");
+                    b.ToTable("HubMessagesDb");
 
-                    b.ToTable("ChatMessagesDb");
+                    b.HasDiscriminator().HasValue("HubMessage");
+
+                    b.UseTphMappingStrategy();
                 });
 
             modelBuilder.Entity("Shared.Data.Entities.InviteCode", b =>
@@ -198,28 +205,6 @@ namespace backend.Data.Migrations
                     b.HasKey("Code");
 
                     b.ToTable("InviteCodesDb");
-                });
-
-            modelBuilder.Entity("Shared.Data.Entities.Room", b =>
-                {
-                    b.Property<string>("Name")
-                        .HasColumnType("text");
-
-                    b.Property<long>("MaxAmountOfUser")
-                        .HasColumnType("bigint");
-
-                    b.Property<string>("OwnerId")
-                        .HasColumnType("text");
-
-                    b.Property<string>("Password")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.HasKey("Name");
-
-                    b.HasIndex("OwnerId");
-
-                    b.ToTable("RoomsDb");
                 });
 
             modelBuilder.Entity("Shared.Data.Entities.User", b =>
@@ -262,9 +247,6 @@ namespace backend.Data.Migrations
                     b.Property<Guid?>("InviteCode")
                         .HasColumnType("uuid");
 
-                    b.Property<bool>("IsDeleted")
-                        .HasColumnType("boolean");
-
                     b.Property<bool>("LockoutEnabled")
                         .HasColumnType("boolean");
 
@@ -288,13 +270,7 @@ namespace backend.Data.Migrations
                     b.Property<bool>("PhoneNumberConfirmed")
                         .HasColumnType("boolean");
 
-                    b.Property<string>("RoomName")
-                        .HasColumnType("text");
-
                     b.Property<string>("SecurityStamp")
-                        .HasColumnType("text");
-
-                    b.Property<string>("SignalrConnectionId")
                         .HasColumnType("text");
 
                     b.Property<bool>("TwoFactorEnabled")
@@ -303,6 +279,9 @@ namespace backend.Data.Migrations
                     b.Property<string>("UserName")
                         .HasMaxLength(256)
                         .HasColumnType("character varying(256)");
+
+                    b.Property<bool>("isDeleted")
+                        .HasColumnType("boolean");
 
                     b.HasKey("Id");
 
@@ -313,9 +292,19 @@ namespace backend.Data.Migrations
                         .IsUnique()
                         .HasDatabaseName("UserNameIndex");
 
-                    b.HasIndex("RoomName");
-
                     b.ToTable("AspNetUsers", (string)null);
+                });
+
+            modelBuilder.Entity("Shared.Data.Entities.ChatMessage", b =>
+                {
+                    b.HasBaseType("Shared.Data.Entities.HubMessage");
+
+                    b.Property<string>("SenderId")
+                        .HasColumnType("text");
+
+                    b.HasIndex("SenderId");
+
+                    b.HasDiscriminator().HasValue("ChatMessage");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<string>", b =>
@@ -376,27 +365,6 @@ namespace backend.Data.Migrations
                         .HasForeignKey("SenderId");
 
                     b.Navigation("Sender");
-                });
-
-            modelBuilder.Entity("Shared.Data.Entities.Room", b =>
-                {
-                    b.HasOne("Shared.Data.Entities.User", "Owner")
-                        .WithMany()
-                        .HasForeignKey("OwnerId");
-
-                    b.Navigation("Owner");
-                });
-
-            modelBuilder.Entity("Shared.Data.Entities.User", b =>
-                {
-                    b.HasOne("Shared.Data.Entities.Room", null)
-                        .WithMany("Users")
-                        .HasForeignKey("RoomName");
-                });
-
-            modelBuilder.Entity("Shared.Data.Entities.Room", b =>
-                {
-                    b.Navigation("Users");
                 });
 #pragma warning restore 612, 618
         }

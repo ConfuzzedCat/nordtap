@@ -44,9 +44,12 @@ public class ChatMessageService : IChatMessageService
         return removedMsg;
     }
 
-    public async Task<List<ChatMessage?>> GetAllGroupChatMessages(string groupName)
+    public async Task<List<ChatMessage>> GetAllGroupChatMessages(string groupName)
     {
-        return await _context.ChatMessagesDb.Select( msg => msg.Group == groupName ? msg : null).ToListAsync();
+        return await _context.ChatMessagesDb
+            .Where( msg => msg.Group == groupName)
+            .Include(x => x.Sender)
+            .ToListAsync();
     }
 
     public async Task<List<ChatMessage?>> GetAllUserChatMessages(User user)
@@ -65,5 +68,12 @@ public class ChatMessageService : IChatMessageService
         _context.ChatMessagesDb.RemoveRange(messagesToDelete);
         await _context.SaveChangesAsync();
         return await messagesToDelete.ToListAsync();
+    }
+
+    public async Task<List<ChatMessage>> DeleteRange(List<ChatMessage> messages)
+    {
+        _context.ChatMessagesDb.RemoveRange(messages);
+        await _context.SaveChangesAsync();
+        return messages;
     }
 }

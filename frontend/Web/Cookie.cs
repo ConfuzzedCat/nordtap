@@ -1,4 +1,5 @@
 using System.Reflection;
+using Microsoft.Net.Http.Headers;
 
 namespace frontend.Web;
 
@@ -85,4 +86,4 @@ public struct Cookie
     {
         return _strValue == string.Empty;
     }
-}   
+}

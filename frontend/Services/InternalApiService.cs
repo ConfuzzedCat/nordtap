@@ -1,9 +1,10 @@
 using System.Net.Http.Headers;
 using System.Text.Json;
-using backend.Data.Entities;
-using backend.Extensions.Models;
 using frontend.Utils;
 using frontend.Web;
+using Shared.Data.Entities;
+using Shared.Extensions.Models;
+using InviteCode = Shared.Data.DTO.InviteCode;
 
 namespace frontend.Services;
 
@@ -12,17 +13,19 @@ public class InternalApiService : IInternalApiService
     private readonly HttpClient _httpClient;
     private readonly ILogger<InternalApiService> _logger;
     private readonly string _baseUrl;
+    private readonly CustomAuthenticationStateProvider _authStateProvider;
 
-    public InternalApiService(HttpClient httpClient, ILogger<InternalApiService> logger)
+    public InternalApiService(IHttpClientFactory httpClientFactory, ILogger<InternalApiService> logger, CustomAuthenticationStateProvider authStateProvider)
     {
-        _httpClient = httpClient;
+        _httpClient = httpClientFactory.CreateClient("ServerAPI");
         _logger = logger;
+        _authStateProvider = authStateProvider;
         _baseUrl = "http://localhost:5296";
     }
     
-    public async Task<string> GetUsername(string cookie)
+    public async Task<string> GetUsername()
     {
-        CookieUtils.AssertCookieNotEmpty(cookie);
+        //CookieUtils.AssertCookieNotEmpty(cookie);
         
         var request = new HttpRequestMessage
         {
@@ -31,8 +34,7 @@ public class InternalApiService : IInternalApiService
             Headers =
             {
                 { "Accept", "application/json" },
-                { "Connection", "keep-alive" },
-                { "Cookie", cookie }
+                { "Connection", "keep-alive" }
             }
         };
         using (var response = await _httpClient.SendAsync(request))
@@ -49,9 +51,8 @@ public class InternalApiService : IInternalApiService
         return string.Empty;
     }
 
-    public async Task<string[]> GetRoles(string cookie)
+    public async Task<string[]> GetRoles()
     {
-        CookieUtils.AssertCookieNotEmpty(cookie);
         
         var request = new HttpRequestMessage
         {
@@ -60,8 +61,7 @@ public class InternalApiService : IInternalApiService
             Headers =
             {
                 { "Accept", "application/json" },
-                { "Connection", "keep-alive" },
-                { "Cookie", cookie }
+                { "Connection", "keep-alive" }
             }
         };
         using (var response = await _httpClient.SendAsync(request))
@@ -77,9 +77,8 @@ public class InternalApiService : IInternalApiService
         return [];
     }
 
-    public async Task<InfoResponse?> GetUserInfo(string cookie)
+    public async Task<InfoResponse?> GetUserInfo()
     {
-        CookieUtils.AssertCookieNotEmpty(cookie);
         
         var request = new HttpRequestMessage
         {
@@ -88,8 +87,7 @@ public class InternalApiService : IInternalApiService
             Headers =
             {
                 { "Accept", "application/json" },
-                { "Connection", "keep-alive" },
-                { "Cookie", cookie }
+                { "Connection", "keep-alive" }
             }
         };
         using (var response = await _httpClient.SendAsync(request))
@@ -106,9 +104,8 @@ public class InternalApiService : IInternalApiService
         return null;
     }
 
-    public async Task<InfoResponse?> PostUserInfo(string cookie, InfoRequest request)
+    public async Task<InfoResponse?> PostUserInfo(InfoRequest request)
     {
-        CookieUtils.AssertCookieNotEmpty(cookie);
         var httpRequest = new HttpRequestMessage
         {
             Method = HttpMethod.Post,
@@ -139,7 +136,7 @@ public class InternalApiService : IInternalApiService
         return null;
     }
 
-    public async Task<Cookie> PostLogin(LoginRequest request)
+    public async Task PostLogin(LoginRequest request)
     {
         var httpRequest = new HttpRequestMessage
         {
@@ -162,15 +159,14 @@ public class InternalApiService : IInternalApiService
         {
             if (response.IsSuccessStatusCode)
             {
-                if (response.Headers.TryGetValues("Set-Cookie", out var values))
+                var user = await this.GetUserInfo();
+                if (user != null)
                 {
-                    string cookieStr = values.First();
-                    return Cookie.Parse(cookieStr);
+                    await _authStateProvider.SetCurrentUserAsync(user);
                 }
             }
             _logger.LogWarning("response status: {status}", response.StatusCode);
         }
-        return Cookie.Empty;
     }
 
     public async Task<bool> PostRegister(RegisterRequest request)

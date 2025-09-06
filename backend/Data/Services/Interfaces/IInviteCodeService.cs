@@ -1,16 +1,17 @@
-using backend.Data.Entities;
+using CSharpFunctionalExtensions;
+using Shared.Data.Entities;
 
 namespace backend.Data.Services.Interfaces;
 
 public interface IInviteCodeService
 {
-    Task<InviteCode> GenerateNewCode(User? user);
-    Task<InviteCode?> FindCode(Guid code);
-    Task<List<InviteCode>> GetAllCodesByUser(User user);
-    Task<List<InviteCode>> GetAllCodes();
-    Task<List<InviteCode>> GetAllCodesByStatus(bool isUsed = false);
-    Task<bool> SetCodeStatus(Guid code, bool isUsed = true);
-    Task<bool> DeleteCode(Guid code);
-    Task DeleteCodesByUser(User user);
-    Task<bool> ValidateCode(Guid inviteCode);
+    Task<Result<InviteCode>> GenerateNewCode(User? user);
+    Task<Maybe<InviteCode>> FindCode(Guid code);
+    Task<Result<List<InviteCode>>> GetAllCodesByUser(User user);
+    Task<Result<List<InviteCode>>> GetAllCodes();
+    Task<Result<List<InviteCode>>> GetAllCodesByStatus(bool isUsed = false);
+    Task<Result> SetCodeStatus(Guid code, bool isUsed = true);
+    Task<Result> DeleteCode(Guid code);
+    Task<Result> DeleteCodesByUser(User user);
+    Task<Result> ValidateCode(Guid inviteCode);
 }

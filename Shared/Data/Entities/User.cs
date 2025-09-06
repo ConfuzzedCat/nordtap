@@ -1,6 +1,6 @@
 using Microsoft.AspNetCore.Identity;
 
-namespace backend.Data.Entities;
+namespace Shared.Data.Entities;
 
 public class User : IdentityUser
 {
@@ -11,7 +11,9 @@ public class User : IdentityUser
     public TimeSpan GameTime { get; set; }
     public DateTime CreationDate { get; set; }
     public Guid? InviteCode { get; set; }
-    public bool isDeleted { get; set; }
+    public bool IsDeleted { get; set; }
+    //TODO: Fix if connected multiple places.
+    public string? SignalrConnectionId { get; set; }
 
     public User()
     {
@@ -21,7 +23,7 @@ public class User : IdentityUser
         GameTotal = 0;
         GameTime = TimeSpan.Zero;
         CreationDate = DateTime.UtcNow;
-        isDeleted = false;
+        IsDeleted = false;
     }
 
     public User(string username) : base(username)
@@ -32,7 +34,7 @@ public class User : IdentityUser
         GameTotal = 0;
         GameTime = TimeSpan.Zero;
         CreationDate = DateTime.UtcNow;
-        isDeleted = false;
+        IsDeleted = false;
     }
 
     public User(Guid _InviteCode) : this()

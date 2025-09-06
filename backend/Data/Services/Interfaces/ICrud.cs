@@ -1,9 +1,11 @@
+using CSharpFunctionalExtensions;
+
 namespace backend.Data.Services.Interfaces;
 
-public interface ICrud<TKey, TEntity>
+public interface ICrud<in TKey, TEntity>
 {
-    Task<TEntity> Create(TEntity entity);
-    Task<TEntity?> Read(TKey entityId);
-    Task<TEntity> Update(TEntity entity);
-    Task<TEntity> Delete(TKey entityId);
+    Task<Result<TEntity>> Create(TEntity entity);
+    Task<Maybe<TEntity>> Read(TKey entityId);
+    Task<Result<TEntity>> Update(TEntity entity);
+    Task<Result<TEntity>> Delete(TKey entityId);
 }

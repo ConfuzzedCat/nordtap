@@ -8,5 +8,5 @@ public interface IChatHubClient
     //Task SystemMessageReceived(HubMessage message);
     Task ChatMessageReceived(ChatMessage message);
     Task MessageDeleted(Guid id);
-    Task MessagesDeleted(IEnumerable<Guid> ids);
+    Task MessagesDeleted(List<ChatMessage> messages);
 }

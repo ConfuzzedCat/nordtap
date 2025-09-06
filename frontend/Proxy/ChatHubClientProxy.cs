@@ -19,6 +19,6 @@ public class ChatHubClientProxy : IHubClientProxy<IChatHubClient>
         _hubConnection.On<Guid>("MessageDeleted", (id) => _client.MessageDeleted(id));
         //_hubConnection.On<HubMessage>("SystemMessageReceived", (message) => _client.SystemMessageReceived(message));
         _hubConnection.On<ChatMessage>("ChatMessageReceived", (message) => _client.ChatMessageReceived(message));
-        _hubConnection.On<IEnumerable<Guid>>("MessagesLoaded", (ids) => _client.MessagesDeleted(ids));
+        _hubConnection.On<List<ChatMessage>>("MessagesDeleted", (messages) => _client.MessagesDeleted(messages));
     }
 }

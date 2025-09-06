@@ -1,5 +1,6 @@
 using backend.Data.Context;
 using backend.Data.Services.Interfaces;
+using CSharpFunctionalExtensions;
 using Microsoft.EntityFrameworkCore;
 using Shared.Data.Entities;
 
@@ -17,7 +18,7 @@ public class InviteCodeService : IInviteCodeService
         _logger = logger;
     }
 
-    public async Task<InviteCode> GenerateNewCode(User? user)
+    public async Task<Result<InviteCode>> GenerateNewCode(User? user)
     {
         InviteCode code;
         if (user is not null)
@@ -34,7 +35,7 @@ public class InviteCodeService : IInviteCodeService
         return code;
     }
 
-    public async Task<InviteCode?> FindCode(Guid code)
+    public async Task<Maybe<InviteCode>> FindCode(Guid code)
     {
         try
         {
@@ -47,22 +48,22 @@ public class InviteCodeService : IInviteCodeService
         }
     }
 
-    public async Task<List<InviteCode>> GetAllCodesByUser(User user)
+    public async Task<Result<List<InviteCode>>> GetAllCodesByUser(User user)
     {
         return await _context.InviteCodesDb.Where(c => c.IssuerId != null && c.IssuerId.ToString() == user.Id).ToListAsync();
     }
 
-    public async Task<List<InviteCode>> GetAllCodes()
+    public async Task<Result<List<InviteCode>>> GetAllCodes()
     {
         return await _context.InviteCodesDb.ToListAsync();
     }
 
-    public async Task<List<InviteCode>> GetAllCodesByStatus(bool isUsed = false)
+    public async Task<Result<List<InviteCode>>> GetAllCodesByStatus(bool isUsed = false)
     {
         return await _context.InviteCodesDb.Where(c => c.IsUsed == isUsed).ToListAsync();
     }
 
-    public async Task<bool> SetCodeStatus(Guid code, bool isUsed = true)
+    public async Task<Result> SetCodeStatus(Guid code, bool isUsed = true)
     {
         try
         {
@@ -70,47 +71,48 @@ public class InviteCodeService : IInviteCodeService
             inviteCode.IsUsed = isUsed;
             _context.Update(inviteCode);
             await _context.SaveChangesAsync();
-            return true;
+            return Result.Success();
         }
         catch (InvalidOperationException e)
         {
             _logger.LogError(e, "Couldn't find invite code: {code}", code);
-            return false;
+            return Result.Failure($"Couldn't find invite code: {code}\n{e}");
         }
     }
 
-    public async Task<bool> DeleteCode(Guid code)
+    public async Task<Result> DeleteCode(Guid code)
     {
         try
         {
             var inviteCode = await _context.InviteCodesDb.FirstAsync(c => c.Code == code);
             _context.Remove(inviteCode);
-            return true;
+            return Result.Success();
         }
         catch (InvalidOperationException e)
         {
             _logger.LogError(e, "Couldn't find invite code: {code}", code);
-            return false;
+            return Result.Failure($"Couldn't find invite code: {code}\n{e}");
         }
     }
 
-    public async Task DeleteCodesByUser(User user)
+    public async Task<Result> DeleteCodesByUser(User user)
     {
         var inviteCodes = await _context.InviteCodesDb.Where(c => c.IssuerId != null && c.IssuerId.ToString() == user.Id).ToListAsync();
         _context.RemoveRange(inviteCodes);
+        return Result.Success();
     }
 
-    public async Task<bool> ValidateCode(Guid inviteCode)
+    public async Task<Result> ValidateCode(Guid inviteCode)
     {
         try
         {
             var code = await _context.InviteCodesDb.FirstAsync(c => c.Code == inviteCode && c.IsUsed == false);
-            return true;
+            return Result.Success();
         }
         catch (InvalidOperationException e)
         {
             _logger.LogError(e, "Couldn't validate invite code: {code}", inviteCode);
-            return false;
+            return Result.Failure($"Couldn't validate invite code: {inviteCode}\n{e}");
         }
     }
 }

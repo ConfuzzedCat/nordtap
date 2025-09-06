@@ -31,9 +31,15 @@ public class InviteCodeGeneratorController : ControllerBase
         var claims = _httpContextAccessor.HttpContext?.User;
         if (claims is null)
         {
-            return await _codeService.GenerateNewCode(null);
+            var nullUserResult = await _codeService.GenerateNewCode(null);
+            if (nullUserResult.IsFailure)
+            {
+                throw new ApplicationException(nullUserResult.Error);
+            }
+            return nullUserResult.Value;
         }
         var user = await _userManager.GetUserAsync(claims);
-        return await _codeService.GenerateNewCode(user);
+        var result = await _codeService.GenerateNewCode(user);
+        return result.Value;
     }
 }

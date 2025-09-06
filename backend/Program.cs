@@ -120,10 +120,15 @@ public class Program
 
             if (userManager.Users.Any(u => u.UserName == username) == false)
             {
-                var invCode = (await inviteCodeService.GenerateNewCode(null)).Code;
+                var invCodeResult = await inviteCodeService.GenerateNewCode(null);
+                if (invCodeResult.IsFailure)
+                {
+                    throw new Exception($"Couldn't create invitation code: {invCodeResult.Error}");
+                }
+                var invCode = invCodeResult.Value.Code;
                 var user = new User(invCode);
                 var isSetToUsed = await inviteCodeService.SetCodeStatus(invCode);
-                if (isSetToUsed == false)
+                if (isSetToUsed.IsFailure)
                 {
                     throw new Exception($"Couldn't set invite code as used. Code: {invCode}");
                 }

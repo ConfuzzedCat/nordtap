@@ -22,9 +22,7 @@
     </ItemGroup>
 
     <ItemGroup>
-      <Folder Include="Components\Elements\" />
       <Folder Include="Extensions\" />
-      <Folder Include="Middleware\" />
       <Folder Include="wwwroot\js\" />
       <Folder Include="wwwroot\lib\" />
     </ItemGroup>
@@ -42,6 +40,12 @@
 
     <ItemGroup>
       <ProjectReference Include="..\Shared\Shared.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <Reference Include="CSharpFunctionalExtensions">
+        <HintPath>..\..\..\.nuget\packages\csharpfunctionalextensions\3.6.0\lib\net8.0\CSharpFunctionalExtensions.dll</HintPath>
+      </Reference>
     </ItemGroup>
 
 </Project>

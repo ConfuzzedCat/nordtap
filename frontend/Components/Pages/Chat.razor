@@ -46,12 +46,11 @@
 
 @code {
     private HubConnection? hubConnection;
-    private IChatHub hubProxy = default!;
+    private IChatHub hubProxy;
     private List<ChatMessage> _messages = [];
     private string? messageInput;
     private string? hubGroup;
     private string password = string.Empty;
-    private IDisposable? subscription;
     private readonly CancellationTokenSource _cancellationTokenSource = new();
 
     protected override async Task OnInitializedAsync()
@@ -87,10 +86,6 @@
         {
             await hubConnection.DisposeAsync();
         }
-        if (subscription is not null)
-        {
-            subscription.Dispose();
-        }
         _messages = [];
     }
 
@@ -109,9 +104,9 @@
         return Task.CompletedTask;
     }
 
-    public Task MessagesDeleted(IEnumerable<Guid> ids)
+    public Task MessagesDeleted(List<ChatMessage> messages)
     {
-        var hubMessages = _messages.Where(msg => ids.Contains(msg.Id) == false);
+        var hubMessages = _messages.Where(msg => messages.Contains(msg) == false);
         _messages = hubMessages.ToList();
         StateHasChanged();
         return Task.CompletedTask;
@@ -125,8 +120,15 @@
         }
         
         //var hash = HashUtil.Sha256String(password);
-        var addToGroup = await hubProxy.AddToGroup(hubGroup, password);
-        
+        var addToGroupResult = await hubProxy.AddToGroup(hubGroup, password);
+        string status = String.Empty;
+        if (addToGroupResult.IsSuccess == false)
+        {
+            TestMessage = addToGroupResult.Error;
+            return;
+        }
+
+        TestMessage = $"Joined room: {hubGroup}";
     }
 
     private async Task LeaveGroup()

@@ -1,5 +1,7 @@
+using CSharpFunctionalExtensions;
 using frontend.Utils;
 using Microsoft.AspNetCore.SignalR.Client;
+using Shared.Data.DTO;
 using Shared.Data.Entities;
 using Shared.Hubs.Interfaces;
 
@@ -14,43 +16,43 @@ public sealed class ChatHubServerProxy : IChatHub
         _hubConnection = hubConnection;
     }
 
-    public async Task LoadMessages(string groupName)
+    public async Task<ResultDto> LoadMessages(string groupName)
     {
-        await _hubConnection.InvokeAsync("LoadMessages", groupName);
+        return await _hubConnection.InvokeAsync<ResultDto>("LoadMessages", groupName);
     }
 
-    public async Task CreateChatMessage(ChatMessage chatMessage)
+    public async Task<ResultDto> CreateChatMessage(ChatMessage chatMessage)
     {
-        await _hubConnection.InvokeAsync("CreateChatMessage",chatMessage);
+        return await _hubConnection.InvokeAsync<ResultDto>("CreateChatMessage",chatMessage);
     }
 
-    public async Task CreateMessage(string group, string message)
+    public async Task<ResultDto> CreateMessage(string group, string message)
     {
-        await _hubConnection.InvokeAsync("CreateMessage", group, message);
+        return await _hubConnection.InvokeAsync<ResultDto>("CreateMessage", group, message);
     }
 
-    public async Task ClearMessages(string groupName)
+    public async Task<ResultDto> ClearMessages(string groupName)
     {
-        await _hubConnection.InvokeAsync("ClearMessages", groupName);
+        return await _hubConnection.InvokeAsync<ResultDto>("ClearMessages", groupName);
     }
 
-    public async Task DeleteMessage(Guid id)
+    public async Task<ResultDto> DeleteMessage(Guid id)
     {
-        await _hubConnection.InvokeAsync("DeleteMessage", id);
+        return await _hubConnection.InvokeAsync<ResultDto>("DeleteMessage", id);
     }
 
-    public async Task<bool> AddToGroup(string groupName, string password)
+    public async Task<ResultDto> AddToGroup(string groupName, string password)
     {
-        return await _hubConnection.InvokeAsync<bool>("AddToGroup",groupName, password);
+        return await _hubConnection.InvokeAsync<ResultDto>("AddToGroup",groupName, password);
     }
 
-    public async Task RemoveFromGroup(string groupName)
+    public async Task<ResultDto> RemoveFromGroup(string groupName)
     {
-        await _hubConnection.InvokeAsync("RemoveFromGroup", groupName);
+        return await _hubConnection.InvokeAsync<ResultDto>("RemoveFromGroup", groupName);
     }
 
-    public async Task DeleteGroup(string groupName)
+    public async Task<ResultDto> DeleteGroup(string groupName)
     {
-        await _hubConnection.InvokeAsync("DeleteGroup", groupName);
+        return await _hubConnection.InvokeAsync<ResultDto>("DeleteGroup", groupName);
     }
 }

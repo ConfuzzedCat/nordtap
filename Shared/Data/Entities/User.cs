@@ -12,6 +12,7 @@ public class User : IdentityUser
     public DateTime CreationDate { get; set; }
     public Guid? InviteCode { get; set; }
     public bool IsDeleted { get; set; }
+    //TODO: Fix if connected multiple places.
     public string? SignalrConnectionId { get; set; }
 
     public User()

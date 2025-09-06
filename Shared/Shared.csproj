@@ -7,15 +7,14 @@
     </PropertyGroup>
 
     <ItemGroup>
-      <Folder Include="Extensions\" />
-    </ItemGroup>
-
-    <ItemGroup>
       <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="9.0.8" />
       <PackageReference Include="Microsoft.Extensions.Identity.Core" Version="9.0.8" />
     </ItemGroup>
 
     <ItemGroup>
+      <Reference Include="CSharpFunctionalExtensions">
+        <HintPath>..\..\..\.nuget\packages\csharpfunctionalextensions\3.6.0\lib\net8.0\CSharpFunctionalExtensions.dll</HintPath>
+      </Reference>
       <Reference Include="Microsoft.AspNetCore.SignalR.Client.Core">
         <HintPath>..\..\..\.nuget\packages\microsoft.aspnetcore.signalr.client.core\9.0.8\lib\net9.0\Microsoft.AspNetCore.SignalR.Client.Core.dll</HintPath>
       </Reference>

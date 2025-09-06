@@ -1,21 +1,13 @@
+using CSharpFunctionalExtensions;
 using Shared.Data.Entities;
 
 namespace backend.Data.Services.Interfaces;
 
-public interface IChatMessageService
+public interface IChatMessageService : ICrud<Guid, ChatMessage>
 {
-
-    //TODO: Use ICrud instead.
-    #region Default Crud methods
-    Task<ChatMessage> Create(ChatMessage chatMessage);
-    Task<ChatMessage?> Read(Guid chatMessageId);
-    Task<ChatMessage> Update(ChatMessage chatMessage);
-    Task<ChatMessage> Delete(Guid chatMessageId);
-    #endregion
-    
-    Task<List<ChatMessage>> GetAllGroupChatMessages(string groupName);
-    Task<List<ChatMessage?>> GetAllUserChatMessages(User user);
-    Task<List<ChatMessage?>> GetAllUserGroupChatMessages(User user, string groupName);
-    Task<List<ChatMessage>> DeleteRange(List<Guid> messages);
-    Task<List<ChatMessage>> DeleteRange(List<ChatMessage> messages);
+    Task<Result<List<ChatMessage>>> GetAllGroupChatMessages(string groupName);
+    Task<Result<List<ChatMessage>>> GetAllUserChatMessages(User user);
+    Task<Result<List<ChatMessage>>> GetAllUserGroupChatMessages(User user, string groupName);
+    Task<Result<List<ChatMessage>>> DeleteRange(List<Guid> messages);
+    Task<Result<List<ChatMessage>>> DeleteRange(List<ChatMessage> messages);
 }

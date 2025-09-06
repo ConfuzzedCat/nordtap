@@ -42,8 +42,8 @@ public static class IdentityApiEndpointRouteBuilderExtensions
             var userManager = sp.GetRequiredService<UserManager<User>>();
             var userStore = sp.GetRequiredService<IUserStore<User>>();
             var inviteCodeService = sp.GetRequiredService<IInviteCodeService>();
-            bool isValid = await inviteCodeService.ValidateCode(registration.InviteCode);
-            if (isValid == false)
+            var isValid = await inviteCodeService.ValidateCode(registration.InviteCode);
+            if (isValid.IsFailure)
             {
                 return CreateValidationProblem(IdentityResult.Failed( new IdentityError
                 {
@@ -60,7 +60,7 @@ public static class IdentityApiEndpointRouteBuilderExtensions
 
             var user = new User(registration.InviteCode);
             var isSetToUsed = await inviteCodeService.SetCodeStatus(registration.InviteCode);
-            if (isSetToUsed == false)
+            if (isSetToUsed.IsFailure)
             {
                 throw new Exception($"Couldn't set invite code as used. Code: {registration.InviteCode}");
             }

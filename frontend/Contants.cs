@@ -4,8 +4,7 @@ namespace frontend;
 
 public class Contants
 {
-    public static readonly JsonSerializerOptions JsonSerializerOptions = new()
+    public static readonly JsonSerializerOptions JsonSerializerOptions = new(JsonSerializerDefaults.Web)
     {
-        PropertyNameCaseInsensitive = true
     };
 }

@@ -1,9 +1,9 @@
 using System.Security.Claims;
-using backend.Data.Entities;
 using backend.Data.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Shared.Data.Entities;
 
 namespace backend.Controllers;
 
@@ -31,9 +31,15 @@ public class InviteCodeGeneratorController : ControllerBase
         var claims = _httpContextAccessor.HttpContext?.User;
         if (claims is null)
         {
-            return await _codeService.GenerateNewCode(null);
+            var nullUserResult = await _codeService.GenerateNewCode(null);
+            if (nullUserResult.IsFailure)
+            {
+                throw new ApplicationException(nullUserResult.Error);
+            }
+            return nullUserResult.Value;
         }
         var user = await _userManager.GetUserAsync(claims);
-        return await _codeService.GenerateNewCode(user);
+        var result = await _codeService.GenerateNewCode(user);
+        return result.Value;
     }
 }

@@ -3,10 +3,11 @@
 @using System.Text.Json
 @using frontend.Services
 @using frontend.Utils
+@using frontend.Web
+@using Shared.Data.Entities
 
 @inject ILogger<Home> Logger
-@inject IInternalApiService InternalApiService
-
+@inject CustomAuthenticationStateProvider AuthStateProvider
 
 <PageTitle>Home</PageTitle>
 
@@ -20,18 +21,17 @@ Welcome to your new app.
 }
 
 @code {
-    [CascadingParameter] private HttpContext HttpContext { get; set; } = default!;
+    //[CascadingParameter] private HttpContext HttpContext { get; set; } = default!;
 
     private string _username = string.Empty;
     protected override async Task OnInitializedAsync()
     {
         try
         {
-            var doesAuthCookieExist = HttpContext.Request.Cookies.ContainsKey("NordtapCookie");
-            if (doesAuthCookieExist)
+            if (await AuthStateProvider.IsAuthenticatedAsync())
             {
-                var cookies = CookieUtils.JoinCookies(HttpContext.Request.Cookies);
-                var response = await InternalApiService.GetUsername(cookies);
+                var currentUser = await AuthStateProvider.GetCurrentUserAsync();
+                var response = currentUser is null ? "UsernameNotFound" : currentUser.Username;
                 if (string.IsNullOrWhiteSpace(response) is false)
                 {
                     _username = response;

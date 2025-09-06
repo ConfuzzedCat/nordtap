@@ -1,6 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 
-namespace backend.Data.Entities;
+namespace Shared.Data.Entities;
 
 public class InviteCode
 {

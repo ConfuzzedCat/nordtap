@@ -1,9 +1,9 @@
-namespace backend.Extensions.Models;
+namespace Shared.Extensions.Models;
 
 /// <summary>
-/// The request type for the "/login" endpoint added by <see cref="IdentityApiEndpointRouteBuilderExtensions.MapIdentityApiCustom"/>.
+/// The request type for the "/register" endpoint added by <see cref="IdentityApiEndpointRouteBuilderExtensions.MapIdentityApiCustom"/>.
 /// </summary>
-public sealed class LoginRequest
+public sealed class RegisterRequest
 {
     /// <summary>
     /// The user's username.
@@ -16,7 +16,7 @@ public sealed class LoginRequest
     public required string Password { get; init; }
         
     /// <summary>
-    /// Whether to remember the user.
+    /// The user's invite code.
     /// </summary>
-    public required bool RememberMe { get; init; }
+    public required Guid InviteCode { get; init; }
 }

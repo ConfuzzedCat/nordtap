@@ -1,7 +1,5 @@
 using System.Diagnostics;
 using System.Security.Claims;
-using backend.Data.Entities;
-using backend.Data.Services;
 using backend.Data.Services.Interfaces;
 using Microsoft.AspNetCore.Authentication.BearerToken;
 using Microsoft.AspNetCore.Http.HttpResults;
@@ -9,10 +7,11 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.Data;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
-using InfoResponse = backend.Extensions.Models.InfoResponse;
-using InfoRequest = backend.Extensions.Models.InfoRequest;
-using LoginRequest = backend.Extensions.Models.LoginRequest;
-using RegisterRequest = backend.Extensions.Models.RegisterRequest;
+using Shared.Data.Entities;
+using InfoResponse = Shared.Extensions.Models.InfoResponse;
+using InfoRequest = Shared.Extensions.Models.InfoRequest;
+using LoginRequest = Shared.Extensions.Models.LoginRequest;
+using RegisterRequest = Shared.Extensions.Models.RegisterRequest;
 
 namespace backend.Extensions;
 public static class IdentityApiEndpointRouteBuilderExtensions
@@ -43,8 +42,8 @@ public static class IdentityApiEndpointRouteBuilderExtensions
             var userManager = sp.GetRequiredService<UserManager<User>>();
             var userStore = sp.GetRequiredService<IUserStore<User>>();
             var inviteCodeService = sp.GetRequiredService<IInviteCodeService>();
-            bool isValid = await inviteCodeService.ValidateCode(registration.InviteCode);
-            if (isValid == false)
+            var isValid = await inviteCodeService.ValidateCode(registration.InviteCode);
+            if (isValid.IsFailure)
             {
                 return CreateValidationProblem(IdentityResult.Failed( new IdentityError
                 {
@@ -61,7 +60,7 @@ public static class IdentityApiEndpointRouteBuilderExtensions
 
             var user = new User(registration.InviteCode);
             var isSetToUsed = await inviteCodeService.SetCodeStatus(registration.InviteCode);
-            if (isSetToUsed == false)
+            if (isSetToUsed.IsFailure)
             {
                 throw new Exception($"Couldn't set invite code as used. Code: {registration.InviteCode}");
             }
@@ -279,14 +278,10 @@ public static class IdentityApiEndpointRouteBuilderExtensions
         return TypedResults.ValidationProblem(errorDictionary);
     }
 
-    private static async Task<InfoResponse> CreateInfoResponseAsync<TUser>(TUser user, UserManager<TUser> userManager)
-        where TUser : class
+    private static async Task<InfoResponse> CreateInfoResponseAsync(User user, UserManager<User> userManager)
     {
-        return new()
-        {
-            Username = await userManager.GetUserNameAsync(user) ?? throw new NotSupportedException("Users must have an username."),
-            Roles = (await userManager.GetRolesAsync(user)).ToArray()
-        };
+        var roles = (await userManager.GetRolesAsync(user)).ToArray();
+        return InfoResponse.ToResponse(user, roles);
     }
 
     // Wrap RouteGroupBuilder with a non-public type to avoid a potential future behavioral breaking change.

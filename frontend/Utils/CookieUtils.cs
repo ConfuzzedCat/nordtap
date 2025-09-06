@@ -4,9 +4,9 @@ namespace frontend.Utils;
 
 public class CookieUtils
 {
-    public static string JoinCookies(IRequestCookieCollection requestCookies)
+    public static string JoinCookies(Cookie[] requestCookies)
     {
-        if (requestCookies.Count == 0)
+        if (requestCookies.Length == 0)
         {
             return string.Empty;
         }

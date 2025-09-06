@@ -2,31 +2,30 @@
 @using System.Text.Json
 @using frontend.Services
 @using frontend.Utils
+@using frontend.Web
 
 @inject ILogger<Account> Logger
-@inject HttpClient HttpClient
 @inject IInternalApiService InternalApiService
-
+@inject CustomAuthenticationStateProvider AuthStateProvider
 <h3>Account</h3>
 
-@if (_info.Length > 0)
+@if (string.IsNullOrWhiteSpace(_info) == false)
 {
     <p>Info from server:</p>
     <p>@_info</p>
 }
     
 @code {
-    [CascadingParameter] private HttpContext HttpContext { get; set; } = default!;
 
     private string _info = "";
 
     protected override async Task OnInitializedAsync()
     {
-        var doesAuthCookieExist = HttpContext.Request.Cookies.ContainsKey("NordtapCookie");
-        if (doesAuthCookieExist)
+        
+        
+        if (await AuthStateProvider.IsAuthenticatedAsync())
         {
-            var cookies = CookieUtils.JoinCookies(HttpContext.Request.Cookies);
-            var response = await InternalApiService.GetUserInfo(cookies);
+            var response = await InternalApiService.GetUserInfo();
             if (response is not null)
             {
                 _info = JsonSerializer.Serialize(response);

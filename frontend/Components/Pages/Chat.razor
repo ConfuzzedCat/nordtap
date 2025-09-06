@@ -1,0 +1,150 @@
+@page "/Chat"
+@rendermode InteractiveWebAssembly
+@using frontend.Proxy
+@using frontend.Web
+@using Microsoft.AspNetCore.SignalR.Client
+@using Shared.Data.Entities
+@using Shared.Hubs.Interfaces
+@using Shared.Utils
+@inject NavigationManager Navigation
+@implements IAsyncDisposable
+@implements Shared.Hubs.Interfaces.IChatHubClient
+
+
+<PageTitle>Chat</PageTitle>
+
+<div class="form-group">
+    <label>
+        group:
+        <input @bind="hubGroup" />
+    </label>
+</div>
+<div class="form-group">
+    <label>
+        password:
+        <input @bind="password" />
+    </label>
+</div>
+<button @onclick="JoinGroup" disabled="@(!IsConnected)">Join group</button>
+<div class="form-group">
+    <label>
+        Message:
+        <input @bind="messageInput" size="50" />
+    </label>
+</div>
+<button @onclick="Send" disabled="@(!IsConnected)">Send</button>
+<button @onclick="LeaveGroup" disabled="@(!IsConnected)">Leave Group</button>
+@TestMessage
+<hr>
+
+<ul id="messagesList">
+    @foreach (var message in _messages)
+    {
+        <li>@message.ToString()</li>
+    }
+</ul>
+
+@code {
+    private HubConnection? hubConnection;
+    private IChatHub hubProxy;
+    private List<ChatMessage> _messages = [];
+    private string? messageInput;
+    private string? hubGroup;
+    private string password = string.Empty;
+    private readonly CancellationTokenSource _cancellationTokenSource = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        hubConnection = new HubConnectionBuilder()
+            .WithUrl("http://localhost:5296/ChatHub", (opt) =>
+            { 
+                //opt.HttpMessageHandlerFactory = _ => CookieDelegatingHandler;
+            })
+            .Build();
+        hubProxy = new ChatHubServerProxy(hubConnection);
+        hubConnection.RegisterClient(this);
+        await hubConnection.StartAsync();
+    }
+
+    private async Task Send()
+    {
+        if (hubConnection is not null && hubGroup is not null && string.IsNullOrWhiteSpace(messageInput) == false)
+        {
+            await hubProxy.CreateMessage(hubGroup, messageInput);
+            TestMessage = messageInput;
+        }
+    }
+
+    public bool IsConnected =>
+        hubConnection?.State == HubConnectionState.Connected;
+
+    public string TestMessage { get; set; }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (hubConnection is not null)
+        {
+            await hubConnection.DisposeAsync();
+        }
+        _messages = [];
+    }
+
+    public Task MessagesLoaded(List<ChatMessage> messages)
+    {
+        _messages = messages;
+        StateHasChanged();
+        return Task.CompletedTask;
+    }
+
+    public Task MessageDeleted(Guid id)
+    {
+        var hubMessages = _messages.Where(msg => msg.Id != id);
+        _messages = hubMessages.ToList();
+        StateHasChanged();
+        return Task.CompletedTask;
+    }
+
+    public Task MessagesDeleted(List<ChatMessage> messages)
+    {
+        var hubMessages = _messages.Where(msg => messages.Contains(msg) == false);
+        _messages = hubMessages.ToList();
+        StateHasChanged();
+        return Task.CompletedTask;
+    }
+
+    private async Task JoinGroup()
+    {
+        if (hubGroup is null)
+        {
+            return;
+        }
+        
+        //var hash = HashUtil.Sha256String(password);
+        var addToGroupResult = await hubProxy.AddToGroup(hubGroup, password);
+        string status = String.Empty;
+        if (addToGroupResult.IsSuccess == false)
+        {
+            TestMessage = addToGroupResult.Error;
+            return;
+        }
+
+        TestMessage = $"Joined room: {hubGroup}";
+    }
+
+    private async Task LeaveGroup()
+    {
+        if (hubGroup is null)
+        {
+            return;
+        }
+        await hubProxy.RemoveFromGroup(hubGroup);
+    }
+
+    public Task ChatMessageReceived(ChatMessage message)
+    {
+        _messages.Add(message);
+        StateHasChanged();
+        return Task.CompletedTask;
+    }
+
+}

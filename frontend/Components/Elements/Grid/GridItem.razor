@@ -3,14 +3,32 @@
 @using frontend.Web
 @inject ILogger<GridItem> Logger
 @inject IJSRuntime Js
+@implements IContext
 
+
+@if (showContextMenu)
+{
+<div style="position: absolute; @_cssStylingContext;"
+     class="context-menu-container" @onclick:stopPropagation>
+    <section class="context-menu-item" @onclick="DeleteContextHandler">
+        Delete Item
+    </section>
+    <section class="context-menu-item" @onclick="DeleteContextHandler">
+        Delete Item
+    </section>
+    <section class="context-menu-item" @onclick="DeleteContextHandler">
+        Delete Item
+    </section>
+</div>
+}
 
 <div style="position: absolute; @_cssStyling; bottom: auto; right: auto"
      @ondragover:preventDefault="true"
-     @onmouseover="async (args) => { ;await ConvertEvent(args, OnMouseOverCallback); }"
-     @ondragstart="async (args) => { OnDragStart(args); await ConvertEvent(args, OnDragStartCallback); }"
+     @onmouseover="async (args) => { /* Add internal callback here */ ; await ConvertEvent(args, OnMouseOverCallback); }"
+     @ondragstart="async (args) => { await OnDragStart(args); await ConvertEvent(args, OnDragStartCallback); }"
      @ondragend="async (args) => { await OnDragEnd(args); await ConvertEvent(args, OnDragEndCallback); }"
      @ondrop="async (args) => { ; await ConvertEvent(args, OnDropCallback); }"
+     @oncontextmenu="async (args) => { await OnContextMenu(args); }" @oncontextmenu:preventDefault="true"
 
      draggable="@Draggable.ToString()"
      @ref="ItemContainerReference">
@@ -18,12 +36,17 @@
 </div>
 
 
+
 @code {
     [CascadingParameter] public Dictionary<GridPosition, GridItem> ParentItems { get; set; }
+    [CascadingParameter] public BoundingClientRect ParentBoundingClientRect { get; set; }
+    [CascadingParameter] public Action<IContext> ParentContextAction { get; set; }
+
     
     [Parameter] public RenderFragment? ChildContent { get; set; }
     [Parameter] public GridItem? CloneItem { get; set; }
     [Parameter] public GridPosition GridPosition { get; set; }
+    [Parameter] public EventCallback<GridPosition> OnRemove { get; set; }
     
     [Parameter] public EventCallback<MouseEventArgs>     OnMouseMoveCallback     { get; set; }
     [Parameter] public EventCallback<GridMouseEventArgs> OnMouseOverCallback     { get; set; }
@@ -41,7 +64,11 @@
     [Parameter] public double                            GridKernelSizeY       { get; set; }
     
     private ElementReference ItemContainerReference { get; set; }
+    public bool showContextMenu { get; set; }
+    private BoundingClientRect _boundingClientRect;
+    private (double X, double Y) _startDragPosition;
     private string _cssStyling = String.Empty;
+    private string _cssStylingContext = String.Empty;
     private double _startX, _startY, _previewX, _previewY;
     private bool _isHovering;
 
@@ -101,26 +128,35 @@
         StateHasChanged();
     }
 
-    void OnDragStart(DragEventArgs args)
+    async Task OnDragStart(DragEventArgs args)
     {
+        if (Draggable == false)
+        {
+            return;
+        }
+        
+        _boundingClientRect = await Js.InvokeAsync<BoundingClientRect>(
+            "DOMGetBoundingClientRect", 
+            [ItemContainerReference]);
+        _startDragPosition = (args.ClientX, args.ClientY);
+
     }
     
     async Task OnDragEnd(DragEventArgs args)
     {
-        var parentBoundingClientRect = await Js.InvokeAsync<BoundingClientRect>(
-            "ParentDOMGetBoundingClientRect", 
-            [ItemContainerReference]);
-        Logger.LogInformation("Bounding box: {box}", parentBoundingClientRect);
+        Logger.LogInformation("Bounding box: {box}", _boundingClientRect);
+        var newPosX = args.ClientX + (_boundingClientRect.X - _startDragPosition.X);
+        var newPosY = args.ClientY + (_boundingClientRect.Y - _startDragPosition.Y);
         var x = 
             Math.Clamp(
-                Math.Round(args.ClientX - parentBoundingClientRect.X), 
-                0, 
-                Math.Round(parentBoundingClientRect.Width - GridKernelSizeX));
+                Math.Round(newPosX),
+                ParentBoundingClientRect.X,
+                Math.Round(ParentBoundingClientRect.Width - GridKernelSizeX));
         var y = 
             Math.Clamp(
-                Math.Round(args.ClientY - parentBoundingClientRect.Y), 
-                0, 
-                Math.Round(parentBoundingClientRect.Height - GridKernelSizeY));
+                Math.Round(newPosY),
+                ParentBoundingClientRect.Y,
+                Math.Round(ParentBoundingClientRect.Height - GridKernelSizeY));
         
         x = CalculateGridKernelPosition(x, GridKernelSizeX);
         y = CalculateGridKernelPosition(y, GridKernelSizeY);
@@ -145,5 +181,25 @@
     private string CreateCssStyling(double x, double y)
     {
         return $"top: {y}px; left: {x}px;";
+    }
+
+    private async Task OnContextMenu(MouseEventArgs args)
+    {
+        if (args.Button == 2)
+        {
+            _cssStylingContext = CreateCssStyling(args.ClientX, args.ClientY);
+            ParentContextAction.Invoke(this);
+            StateHasChanged();
+        }
+    }
+
+    public void NotifyChange()
+    {
+        StateHasChanged();
+    }
+
+    private async Task DeleteContextHandler()
+    {
+        await OnRemove.InvokeAsync(GridPosition);
     }
 }

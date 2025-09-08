@@ -4,10 +4,19 @@ body {
 
     --max-width: calc(100vw - calc(var(--margin-width) * 2));
     --max-height: calc(100vh - calc(var(--margin-height) * 2));
+    
+    /* Colors */
+    --context-menu-background-color: #212121;
+    --context-menu-foreground-color: #cbcbcb;
+    --context-menu-item-hover-color: #414141;
 }
 
 html, body {
     font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+}
+
+.debug-box{
+    border: 1px solid red;
 }
 
 h1:focus {

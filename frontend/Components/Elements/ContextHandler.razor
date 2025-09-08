@@ -1,0 +1,27 @@
+@using frontend.Web
+<CascadingValue Value="NotifyParentOfContext" IsFixed="true">
+    <div @onclick="OnClick">
+        @ChildContent
+    </div>
+</CascadingValue>
+@code {
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    private static IContext? _currentContextShow;
+    public Action<IContext> NotifyParentOfContext = item =>
+    {
+        item.showContextMenu = true;
+        _currentContextShow = item;
+    };
+    private void OnClick()
+    {
+        if (_currentContextShow == null)
+        {
+            return;
+        }
+        _currentContextShow.showContextMenu = false;
+        _currentContextShow.NotifyChange();
+        _currentContextShow = null;
+        StateHasChanged();
+    }
+}

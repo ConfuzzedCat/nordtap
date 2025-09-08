@@ -9,7 +9,7 @@
         </option>
         <option name="executable">
           <ExecutableSnapshot>
-            <option name="id" value="runConfig:.NET Launch Settings Profile.backend: http" />
+            <option name="id" value="runConfig:.NET Launch Settings Profile.Backend" />
           </ExecutableSnapshot>
         </option>
       </ExecutableRowSnapshot>
@@ -21,7 +21,7 @@
         </option>
         <option name="executable">
           <ExecutableSnapshot>
-            <option name="id" value="runConfig:.NET Launch Settings Profile.frontend: http" />
+            <option name="id" value="runConfig:.NET Launch Settings Profile.Frontend" />
           </ExecutableSnapshot>
         </option>
       </ExecutableRowSnapshot>

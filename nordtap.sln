@@ -4,7 +4,9 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "backend", "backend/backend.
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "frontend", "frontend/frontend.csproj", "{14C50C8B-2F10-4052-8CD5-F716EF31B949}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Shared", "Shared\Shared.csproj", "{3CA885A1-ED06-47C3-AC8F-0F35176784D6}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Shared", "Shared/Shared.csproj", "{3CA885A1-ED06-47C3-AC8F-0F35176784D6}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Nordtap", "nordtap/Nordtap.csproj", "{168E8F94-5398-4A8E-A9FB-2C79494B082C}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -24,5 +26,9 @@ Global
 		{3CA885A1-ED06-47C3-AC8F-0F35176784D6}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{3CA885A1-ED06-47C3-AC8F-0F35176784D6}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{3CA885A1-ED06-47C3-AC8F-0F35176784D6}.Release|Any CPU.Build.0 = Release|Any CPU
+		{168E8F94-5398-4A8E-A9FB-2C79494B082C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{168E8F94-5398-4A8E-A9FB-2C79494B082C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{168E8F94-5398-4A8E-A9FB-2C79494B082C}.Release|Any CPU.ActiveCfg = Debug|Any CPU
+		{168E8F94-5398-4A8E-A9FB-2C79494B082C}.Release|Any CPU.Build.0 = Debug|Any CPU
 	EndGlobalSection
 EndGlobal

@@ -8,31 +8,60 @@
 
 @if (showContextMenu)
 {
-<div style="position: absolute; @_cssStylingContext;"
-     class="context-menu-container" @onclick:stopPropagation>
-    <section class="context-menu-item" @onclick="DeleteContextHandler">
-        Delete Item
-    </section>
-    <section class="context-menu-item" @onclick="DeleteContextHandler">
-        Delete Item
-    </section>
-    <section class="context-menu-item" @onclick="DeleteContextHandler">
-        Delete Item
-    </section>
-</div>
+    <div style="position: absolute; @_cssStylingContext;"
+         class="context-menu-container" @onclick:stopPropagation>
+        @if (IsOwnedByUser)
+        {
+            <section class="context-menu-item context-menu-item-hoverable" @onclick="LockContextHandler">
+                @if (IsItemLocked)
+                {
+                    <text>Unlock Item</text>
+                }
+                else
+                {
+                    <text>Lock Item</text>
+                }
+            </section>
+            <section class="context-menu-item context-menu-item-hoverable" @onclick="DeleteContextHandler">
+                Delete Item
+            </section>
+            <section class="context-menu-item context-menu-item-hoverable" @onclick="StickyContextHandler">
+                Stick Item to another Item
+            </section>
+        }
+        <section class="context-menu-item">
+            Is owned by you: @IsOwnedByUser
+        </section>
+    </div>
 }
 
-<div style="position: absolute; @_cssStyling; bottom: auto; right: auto"
-     @ondragover:preventDefault="true"
+<div style="position: absolute; @_cssStyling; bottom: auto; right: auto; z-index: @ZIndex"
      @onmouseover="async (args) => { /* Add internal callback here */ ; await ConvertEvent(args, OnMouseOverCallback); }"
      @ondragstart="async (args) => { await OnDragStart(args); await ConvertEvent(args, OnDragStartCallback); }"
      @ondragend="async (args) => { await OnDragEnd(args); await ConvertEvent(args, OnDragEndCallback); }"
      @ondrop="async (args) => { ; await ConvertEvent(args, OnDropCallback); }"
-     @oncontextmenu="async (args) => { await OnContextMenu(args); }" @oncontextmenu:preventDefault="true"
+     @oncontextmenu="async (args) => { await OnContextMenu(args); }"
+     @onclick="OnClick"
+     @ondragover:preventDefault="true"
+     @oncontextmenu:preventDefault="true"
 
-     draggable="@Draggable.ToString()"
+
+     draggable="@IsDraggable().ToString()"
      @ref="ItemContainerReference">
     @ChildContent
+    @if (StickyChild is not null)
+    {
+        <GridItem
+            GridPosition="@(new GridPosition(GridPosition.X, GridPosition.Y-20))"
+            ChildContent="@StickyChild.ChildContent"
+            IsOwnedByUser="@IsOwnedByUser"
+            GridKernelSizeX="@GridKernelSizeX"
+            GridKernelSizeY="@GridKernelSizeY"
+            IsStickyChild="@true"
+            ZIndex="@(ZIndex-1)"
+            OnRemove="@OnRemoveSticky">
+        </GridItem>
+    }
 </div>
 
 
@@ -40,13 +69,17 @@
 @code {
     [CascadingParameter] public Dictionary<GridPosition, GridItem> ParentItems { get; set; }
     [CascadingParameter] public BoundingClientRect ParentBoundingClientRect { get; set; }
-    [CascadingParameter] public Action<IContext> ParentContextAction { get; set; }
+    [CascadingParameter(Name = "NotifyParentOfContext")] public Action<IContext> ParentContextAction { get; set; }
+    [CascadingParameter(Name = "CurrentStickySelector")] public GridItem? CurrentStickySelector { get; set; }
+    [CascadingParameter(Name = "IsStickyMode")] public bool IsStickyMode { get; set; }
 
     
     [Parameter] public RenderFragment? ChildContent { get; set; }
     [Parameter] public GridItem? CloneItem { get; set; }
     [Parameter] public GridPosition GridPosition { get; set; }
     [Parameter] public EventCallback<GridPosition> OnRemove { get; set; }
+    [Parameter] public EventCallback<bool> OnStickyModeChange { get; set; }
+    [Parameter] public EventCallback<GridItem?> OnCurrentStickySelectorChange { get; set; }
     
     [Parameter] public EventCallback<MouseEventArgs>     OnMouseMoveCallback     { get; set; }
     [Parameter] public EventCallback<GridMouseEventArgs> OnMouseOverCallback     { get; set; }
@@ -56,21 +89,34 @@
     [Parameter] public EventCallback<GridDragEventArgs>  OnDragLeaveCallback     { get; set; }
     [Parameter] public EventCallback<GridDragEventArgs>  OnDragOverCallback      { get; set; }
     [Parameter] public EventCallback<GridDragEventArgs>  OnDropCallback          { get; set; }
-    [Parameter] public bool                              IsSelecting     { get; set; }
-    [Parameter] public bool                              IsSelected      { get; set; }
-    [Parameter] public bool                              IsTarget        { get; set; }
-    [Parameter] public bool                              Draggable       { get; set; }
-    [Parameter] public double                            GridKernelSizeX       { get; set; }
-    [Parameter] public double                            GridKernelSizeY       { get; set; }
+    [Parameter] public bool                              IsSelecting             { get; set; }
+    [Parameter] public bool                              IsSelected              { get; set; }
+    [Parameter] public bool                              IsTarget                { get; set; }
+    [Parameter] public bool                              IsOwnedByUser           { get; set; }
+    [Parameter] public bool                              IsStickyChild           { get; set; }
+    [Parameter] public double                            GridKernelSizeX         { get; set; }
+    [Parameter] public double                            GridKernelSizeY         { get; set; }
+    [Parameter] public int                               ZIndex                  { get; set; }
+    [Parameter] public GridItem?                         StickyChild             { get; set; }
     
     private ElementReference ItemContainerReference { get; set; }
     public bool showContextMenu { get; set; }
+    public bool IsItemLocked { get; set; }
+    
     private BoundingClientRect _boundingClientRect;
     private (double X, double Y) _startDragPosition;
     private string _cssStyling = String.Empty;
     private string _cssStylingContext = String.Empty;
     private double _startX, _startY, _previewX, _previewY;
     private bool _isHovering;
+    private bool _isStickySelector = false;
+
+    public static GridItem CloneStatic(GridItem other)
+    {
+        var newItem = new GridItem();
+        newItem.Clone(other);
+        return newItem;
+    }
 
     protected override Task OnInitializedAsync()
     {
@@ -99,6 +145,8 @@
         {
             GridKernelSizeY = 5;
         }
+
+        IsItemLocked = !IsOwnedByUser;
         
         return base.OnInitializedAsync();
     }
@@ -109,6 +157,7 @@
         GridPosition = cloneItem.GridPosition;
         _startX = cloneItem._startX;
         _startY = cloneItem._startY;
+        StickyChild = cloneItem.StickyChild;
     }
 
     private async Task ConvertEvent(DragEventArgs args, EventCallback<GridDragEventArgs> eventCallback)
@@ -130,7 +179,7 @@
 
     async Task OnDragStart(DragEventArgs args)
     {
-        if (Draggable == false)
+        if (IsDraggable() == false)
         {
             return;
         }
@@ -144,19 +193,30 @@
     
     async Task OnDragEnd(DragEventArgs args)
     {
-        Logger.LogInformation("Bounding box: {box}", _boundingClientRect);
+        if (IsDraggable() == false)
+        {
+            return;
+        }
+        Logger.LogInformation("Child Bounding box: {box}", _boundingClientRect);
+        Logger.LogInformation("Parent Bounding box: {box}", ParentBoundingClientRect);
         var newPosX = args.ClientX + (_boundingClientRect.X - _startDragPosition.X);
         var newPosY = args.ClientY + (_boundingClientRect.Y - _startDragPosition.Y);
         var x = 
             Math.Clamp(
                 Math.Round(newPosX),
                 ParentBoundingClientRect.X,
-                Math.Round(ParentBoundingClientRect.Width - GridKernelSizeX));
+                Math.Round(
+                    ParentBoundingClientRect.X + 
+                    ParentBoundingClientRect.Width - 
+                    _boundingClientRect.Width));
         var y = 
             Math.Clamp(
                 Math.Round(newPosY),
                 ParentBoundingClientRect.Y,
-                Math.Round(ParentBoundingClientRect.Height - GridKernelSizeY));
+                Math.Round(
+                    ParentBoundingClientRect.Y + 
+                    ParentBoundingClientRect.Height - 
+                    _boundingClientRect.Height));
         
         x = CalculateGridKernelPosition(x, GridKernelSizeX);
         y = CalculateGridKernelPosition(y, GridKernelSizeY);
@@ -201,5 +261,68 @@
     private async Task DeleteContextHandler()
     {
         await OnRemove.InvokeAsync(GridPosition);
+    }
+
+    private void LockContextHandler()
+    {
+        IsItemLocked = !IsItemLocked;
+        showContextMenu = false;
+        StateHasChanged();
+    }
+
+    private bool IsDraggable()
+    {
+        return (IsOwnedByUser && IsItemLocked == false && IsStickyMode == false && IsStickyChild == false);
+    }
+
+    private void OnRemoveSticky()
+    {
+        StickyChild = null;
+        StateHasChanged();
+    }
+
+    private async Task StickyContextHandler()
+    {
+        IsStickyMode = true;
+        showContextMenu = false;
+        _isStickySelector = true;
+        await OnStickyModeChange.InvokeAsync(true);
+        await OnCurrentStickySelectorChange.InvokeAsync(this);
+        StateHasChanged();
+    }
+
+    private async Task OnClick(MouseEventArgs obj)
+    {
+        if (obj.Button != 0)
+        {
+            return;
+        }
+        if (IsStickyMode == false)
+        {
+            return;
+        }
+
+        if (_isStickySelector)
+        {
+            return;
+        }
+
+        if (CurrentStickySelector == null)
+        {
+            return;
+        }
+
+        await CurrentStickySelector.AttachToGridItem(CloneStatic(CurrentStickySelector));
+        CurrentStickySelector = null;
+    }
+
+    public async Task AttachToGridItem(GridItem item)
+    {
+        await OnStickyModeChange.InvokeAsync(false);
+        //_cssStyling = CreateCssStyling(0, 20);
+        item.StickyChild = this;
+        item.NotifyChange();
+        StateHasChanged();
+        //await OnRemove.InvokeAsync(item.GridPosition);
     }
 }

@@ -1,10 +1,7 @@
 .grid-container {
         
     min-width: 100%;
-    min-height: 100%;
-
-    width: var(--max-width);
-    height: var(--max-height);
+    min-height: 25em;
     
     max-width: var(--max-width);
     max-height: 100%;

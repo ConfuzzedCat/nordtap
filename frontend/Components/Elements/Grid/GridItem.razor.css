@@ -11,14 +11,16 @@
     justify-content: center;
     align-items: center;
     overflow: clip;
+    padding: .5ch;
     
 }
 
 .context-menu-item{
     padding-left: .25em;
     padding-right: .25em;
+    width: 100%;
 }
 
-.context-menu-item:hover{
+.context-menu-item-hoverable:hover{
     background-color: var(--context-menu-item-hover-color);
 }

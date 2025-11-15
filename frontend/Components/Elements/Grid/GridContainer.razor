@@ -1,29 +1,36 @@
 @using frontend.Components.Elements.ElementData
 @using frontend.Components.Elements.Grid.Events
 @using frontend.Web
-@using _Imports = frontend._Imports
 @inject ILogger<GridContainer> Logger
 @inject IJSRuntime Js
-
-<pre>children:@Items.Count</pre>
-<div class="grid-container" @ref="ItemReference">
-    <CascadingValue Value="BoundingClientRect" IsFixed="true">
-        <CascadingValue Value="@Items">
-            @foreach (var item in Items)
-            {
-                <GridItem
-                    CloneItem="item.Value"
-                    GridPosition="item.Key"
-                    Draggable="@AllowDragging"
-                    GridKernelSizeX="10"
-                    GridKernelSizeY="10"
-                    OnRemove="OnRemoveCallback" >
-                </GridItem>
-            }
+<button @onclick="AddChild">addChild</button>
+<div class="@_classes" @ref="ItemReference" @attributes="AdditionalAttributes">
+    <CascadingValue Value="BoundingClientRect">
+        <CascadingValue Value="IsStickyMode" Name="IsStickyMode">
+            <CascadingValue Value="CurrentStickySelector" Name="CurrentStickySelector">
+                <CascadingValue Value="@Items">
+                    @foreach (var item in Items)
+                    {
+                        <GridItem
+                            CloneItem="item.Value"
+                            GridPosition="item.Key"
+                            IsOwnedByUser="@AllowDragging"
+                            GridKernelSizeX="10"
+                            GridKernelSizeY="10"
+                            OnRemove="OnRemoveCallback" 
+                            OnStickyModeChange="OnStickyModeChangeCallback"
+                            OnCurrentStickySelectorChange="OnCurrentStickySelectorChange">
+                        </GridItem>
+                    }
+                </CascadingValue>
+            </CascadingValue>
         </CascadingValue>
     </CascadingValue>
 </div>
 @code {
+
+    [Parameter(CaptureUnmatchedValues = true)]
+    public IDictionary<string, object>? AdditionalAttributes { get; set; }
     
     // Make it more of an absolute position system, instead of row and columns
     [Parameter] public int Columns { get; set; }
@@ -37,7 +44,21 @@
     [Parameter] public Dictionary<GridPosition, GridItem> Items { get; set; } = new();
 
     public BoundingClientRect BoundingClientRect { get; private set; }
+    public bool IsStickyMode { get; set; }
+    public GridItem? CurrentStickySelector { get; set; }
     public ElementReference ItemReference { get; set; }
+
+    private string _classes = "grid-container";
+
+    protected override Task OnParametersSetAsync()
+    {
+        if(AdditionalAttributes != null && AdditionalAttributes.TryGetValue("class", out var value))
+        {
+            _classes += " " + value;
+            AdditionalAttributes.Remove("class");
+        }
+        return base.OnParametersSetAsync();
+    }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -67,14 +88,14 @@
     public async Task AddChild()
     {
         var rand = new Random();
-        double x = Math.Round(rand.NextDouble() * 1900d);
-        double y = Math.Round(rand.NextDouble() * 900d);
+        double x = Math.Round(rand.NextDouble() * BoundingClientRect.Right);
+        double y = Math.Round(rand.NextDouble() * BoundingClientRect.Bottom);
         var pos = new GridPosition(x, y);
         
         var didRegister =  await Register(pos, new GridItem
         {
             GridPosition = pos,
-            ChildContent = @<img class="card-img" src="https://cards.scryfall.io/large/front/4/f/4f663979-a778-4fb2-97c4-67ab82926f13.jpg"/>
+            ChildContent = @<img draggable="false" class="card-img" src="https://cards.scryfall.io/large/front/4/f/4f663979-a778-4fb2-97c4-67ab82926f13.jpg"/>
         });
         
         Logger.LogInformation("Did it register? {didRegister}", didRegister);
@@ -87,4 +108,17 @@
         StateHasChanged();
         Logger.LogInformation("Removing Item: {pos}", pos);
     }
+
+    private void OnStickyModeChangeCallback(bool obj)
+    {
+        IsStickyMode = obj;
+        StateHasChanged();
+    }
+
+    private void OnCurrentStickySelectorChange(GridItem? obj)
+    {
+        CurrentStickySelector = obj;
+        StateHasChanged();
+    }
+
 }

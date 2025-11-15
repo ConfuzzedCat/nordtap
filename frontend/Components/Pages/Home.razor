@@ -10,13 +10,11 @@
 @inject CustomAuthenticationStateProvider AuthStateProvider
 
 <PageTitle>Home</PageTitle>
-<h1>Hello, world!</h1>
-
-Welcome to your new app.
-<button @onclick="AddChild">addChild</button> 
-
-<GridContainer @ref="_child" AllowDragging="@false">
+<GridContainer AllowDragging="@false" class="debug-box">
 </GridContainer>
+<GridContainer @ref="_child" AllowDragging="@true" class="debug-box-green">
+</GridContainer>
+
 
 @if (string.IsNullOrWhiteSpace(_username) is false)
 {

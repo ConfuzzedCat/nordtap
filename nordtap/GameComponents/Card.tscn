@@ -1,0 +1,54 @@
+[gd_scene load_steps=5 format=3 uid="uid://cce6uaex731ql"]
+
+[ext_resource type="Texture2D" uid="uid://dgt2gk351qa2a" path="res://Assets/Dev/ody-227-volley-of-boulders.jpg" id="1_lx1go"]
+[ext_resource type="Script" uid="uid://pvpjy85gcvs0" path="res://GameComponents/Card.cs" id="1_vsair"]
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_vsair"]
+size = Vector2(672, 936)
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_vsair"]
+content_margin_left = 0.0
+content_margin_top = 0.0
+content_margin_right = 0.0
+content_margin_bottom = 0.0
+bg_color = Color(0.101960786, 0.101960786, 0.101960786, 1)
+corner_radius_top_left = 30
+corner_radius_top_right = 30
+corner_radius_bottom_right = 30
+corner_radius_bottom_left = 30
+corner_detail = 5
+
+[node name="Cardbase" type="RigidBody2D"]
+input_pickable = true
+mass = 0.001
+gravity_scale = 0.0
+sleeping = true
+can_sleep = false
+freeze = true
+script = ExtResource("1_vsair")
+
+[node name="Collision" type="CollisionShape2D" parent="."]
+shape = SubResource("RectangleShape2D_vsair")
+
+[node name="ImageFetcher" type="HTTPRequest" parent="."]
+
+[node name="PanelContainer" type="PanelContainer" parent="."]
+clip_children = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -336.0
+offset_top = -468.0
+offset_right = 336.0
+offset_bottom = 468.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 1
+theme_override_styles/panel = SubResource("StyleBoxFlat_vsair")
+
+[node name="CardImage" type="Sprite2D" parent="PanelContainer"]
+texture = ExtResource("1_lx1go")
+centered = false
+region_rect = Rect2(16, 16, 640, 904)

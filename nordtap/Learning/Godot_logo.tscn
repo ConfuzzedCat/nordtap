@@ -1,0 +1,16 @@
+[gd_scene load_steps=3 format=3 uid="uid://d4hjr1kc3yltc"]
+
+[ext_resource type="Texture2D" uid="uid://dyt0vbefe2mat" path="res://icon.svg" id="1_s3j3c"]
+[ext_resource type="Script" uid="uid://de5dn73sj2uhq" path="res://RotateTest.cs" id="2_onaj1"]
+
+[node name="Sprite2D" type="Sprite2D"]
+texture = ExtResource("1_s3j3c")
+script = ExtResource("2_onaj1")
+
+[node name="Label" type="Label" parent="."]
+offset_left = -44.0
+offset_top = -85.0
+offset_right = 34.0
+offset_bottom = -62.0
+text = "TEST TEXT"
+metadata/_edit_use_anchors_ = true
